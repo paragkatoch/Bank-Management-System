@@ -1,0 +1,99 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <signal.h>
+#include "../include/config.h"
+#include "../include/db/user.h"
+#include "../include/init.h"
+
+#define PORT 8080
+#define BUF_SIZE 1024
+
+void handle_client(int cl_fd)
+{
+    clientfd = cl_fd;
+    user_login();
+    // char buffer[BUF_SIZE];
+    // int n;
+
+    // while ((n = read(cl_fd, buffer, BUF_SIZE - 1)) > 0) {
+    //     buffer[n] = '\0';
+    //     printf("Child %d received: %s\n", getpid(), buffer);
+    //     write(cl_fd, buffer, n);
+    // }
+    // close(cl_fd);
+    // printf("Child %d connection closed.\n", getpid());
+    // exit(0);
+}
+
+int main()
+{
+    int server_fd, client_fd;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t addrlen = sizeof(client_addr);
+
+    // Ignore zombie children
+    signal(SIGCHLD, SIG_IGN);
+
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    {
+        perror("socket");
+        exit(1);
+    }
+
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(PORT);
+
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        perror("bind");
+        close(server_fd);
+        exit(1);
+    }
+
+    if (listen(server_fd, 5) < 0)
+    {
+        perror("listen");
+        close(server_fd);
+        exit(1);
+    }
+
+    printf("Concurrent server (fork) listening on port %d...\n", PORT);
+
+    init();
+
+    while (1)
+    {
+        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &addrlen);
+        if (client_fd < 0)
+        {
+            perror("accept");
+            continue;
+        }
+
+        printf("New client connected: %s:%d\n",
+               inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+
+        pid_t pid = fork();
+        if (pid == 0)
+        {
+            close(server_fd); // Child does not need listening socket
+            handle_client(client_fd);
+        }
+        else if (pid > 0)
+        {
+            close(client_fd); // Parent closes connected socket
+        }
+        else
+        {
+            perror("fork");
+            close(client_fd);
+        }
+    }
+    return 0;
+}
