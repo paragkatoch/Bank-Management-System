@@ -79,9 +79,6 @@ int record__save(void *rec, size_t size, const char *filename)
     return (write_size == size) ? 0 : -1;
 }
 
-// TODO: update on pos and update using cmp
-// TODO: update all function for logging out everyone
-
 /**
  * Update record at position `pos`
  *
@@ -142,6 +139,106 @@ int record__search(void *rec, size_t size, const char *filename, int (*cmp)(void
             unlock_file(fd);
             close(fd);
             return index;
+        }
+        index++;
+    }
+
+    unlock_file(fd);
+    close(fd);
+    return -1;
+}
+
+int record__search_and_update(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *))
+{
+    int fd = open(filename, O_RDWR);
+    if (fd == -1)
+        return -1;
+
+    if (lock_file(fd, F_RDLCK) == -1)
+    {
+        close(fd);
+        return -1;
+    }
+
+    ssize_t n;
+    int index = 0;
+
+    while ((n = read(fd, rec, size)) == size)
+    {
+        if (cmp(rec, ctx))
+        {
+            off_t offset = (off_t)index * size;
+
+            if (lseek(fd, offset, SEEK_SET) == (off_t)-1)
+            {
+                perror("lseek");
+                break;
+            }
+
+            update(rec);
+
+            ssize_t w = write(fd, rec, size);
+            if (w != size)
+            {
+                perror("write");
+                break;
+            }
+
+            unlock_file(fd);
+            close(fd);
+            return index;
+        }
+        index++;
+    }
+
+    unlock_file(fd);
+    close(fd);
+    return -1;
+}
+
+int record__search_and_update_cont(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *))
+{
+    int fd = open(filename, O_RDWR);
+    if (fd == -1)
+        return -1;
+
+    if (lock_file(fd, F_RDLCK) == -1)
+    {
+        close(fd);
+        return -1;
+    }
+
+    ssize_t n;
+    int index = 0;
+
+    while ((n = read(fd, rec, size)) == size)
+    {
+        if (cmp(rec, ctx))
+        {
+            off_t offset = (off_t)index * size;
+
+            if (lseek(fd, offset, SEEK_SET) == (off_t)-1)
+            {
+                perror("lseek");
+                break;
+            }
+
+            update(rec);
+
+            ssize_t w = write(fd, rec, size);
+            if (w != size)
+            {
+                perror("write");
+                break;
+            }
+
+            offset = (off_t)(index + 1) * size;
+
+            if (lseek(fd, offset, SEEK_SET) == (off_t)-1)
+            {
+                perror("lseek");
+                break;
+            }
         }
         index++;
     }

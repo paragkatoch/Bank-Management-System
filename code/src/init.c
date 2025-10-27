@@ -13,6 +13,35 @@
 #define DEFAULT_USERNAME "admin"
 #define DEFAULT_PASSWORD "admin123"
 
+void create_admin()
+{
+    User user;
+    init_user(&user, 1001, 1, 0, 1, DEFAULT_NAME, "23", "IIITB", "1000110001", DEFAULT_USERNAME, DEFAULT_PASSWORD);
+    record__save(&user, sizeof(user), USER_DB);
+
+    printf("User database initialized with default admin account\n");
+    printf("Username: %s\n", user.username);
+    printf("Password: %s\n", user.password);
+}
+
+int true_func(void *a, void *b)
+{
+    return 1;
+}
+
+void update_session(void *val)
+{
+    User *user = (User *)val;
+    user->session_active = 0;
+}
+
+void logout_everyone()
+{
+    printf("\nLogging out everyone before starting");
+    User user;
+    record__search_and_update_cont(&user, sizeof(user), USER_DB, &true_func, NULL, &update_session);
+}
+
 /**
  * Initialize db's and inital users
  */
@@ -28,19 +57,18 @@ int init()
     {
         printf("User database already exists. Exiting...\n");
         close(fd);
+
+        // logout everyone from last run
+        logout_everyone();
         return -1;
     }
 
     printf("User database doesn't exists. Creating...\n");
+    fd = open(USER_DB, O_CREAT, 0666);
+    close(fd);
 
-    // Initilaize db and create and save admin user
-    User user;
-    init_user(&user, 1001, 1, 0, 1, DEFAULT_NAME, 23, "IIITB", "1000110001", DEFAULT_USERNAME, DEFAULT_PASSWORD);
-    record__save(&user, sizeof(user), USER_DB);
-
-    printf("User database initialized with default admin account\n");
-    printf("Username: %s\n", user.username);
-    printf("Password: %s\n", user.password);
+    // create admin user
+    create_admin();
 
     return 0;
 }

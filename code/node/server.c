@@ -13,19 +13,20 @@
 #define PORT 8080
 #define BUF_SIZE 1024
 
-// TODO: show socket address in connection closed message
-void handle_client(int cl_fd)
+void handle_client(int cl_fd, char *client_address)
 {
     clientfd = cl_fd;
     user_login();
 
     close(cl_fd);
-    printf("Child %d connection closed.\n", getpid());
+    printf("Child %s connection closed.\n", client_address);
     exit(0);
 }
 
 int main()
 {
+    init();
+
     int server_fd, client_fd;
     struct sockaddr_in server_addr, client_addr;
     socklen_t addrlen = sizeof(client_addr);
@@ -59,8 +60,6 @@ int main()
 
     printf("Concurrent server (fork) listening on port %d...\n", PORT);
 
-    init();
-
     while (1)
     {
         client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &addrlen);
@@ -70,14 +69,17 @@ int main()
             continue;
         }
 
-        printf("New client connected: %s:%d\n",
-               inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+        char client_address[100]; // or bigger if you want
+
+        snprintf(client_address, sizeof(client_address), "%s:%d", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+
+        printf("New client connected: %s\n", client_address);
 
         pid_t pid = fork();
         if (pid == 0)
         {
             close(server_fd); // Child does not need listening socket
-            handle_client(client_fd);
+            handle_client(client_fd, client_address);
         }
         else if (pid > 0)
         {

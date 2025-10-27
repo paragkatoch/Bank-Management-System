@@ -12,7 +12,7 @@ typedef struct
     int account_active;
 
     char name[50];
-    int age;
+    char age[5];
     char address[100];
     char phone[20];
 
@@ -26,7 +26,7 @@ typedef struct
 // =======================================
 
 // init user
-void init_user(User *user, int userId, int role, int s_a, int a_a, char *name, int age, char *address, char *phone, char *username, char *password);
+void init_user(User *user, int userId, int role, int s_a, int a_a, char *name, char *age, char *address, char *phone, char *username, char *password);
 
 // Login
 void user_login();

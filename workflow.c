@@ -19,17 +19,17 @@
 
                     1. View Balance (Account) ✅
                         1. Search for account using userId and return the balance
-                    
+
                     2. Deposit/Withdraw (Account) ✅
                         1. Search for the account userId and update the balance
-                    
+
                     3. Transfer funds (Account) ✅
                         1. Search for 2 accounts using 2 userIds
                         2. Update balance of both accounts
 
                     4. Apply loan (Loan) ✅
                         1. Create a loan entry in loan db
-                    
+
                     5. View loan status (Loan) ✅
                         1. Search for loans in loan db using userId
 
@@ -72,7 +72,7 @@
 
                     2. Functions -
 
-                        1. Activate/deactivate customer accounts (Account) ✅
+                        1. Activate/deactivate customer accounts (User) ✅
                             1. Filter account on the basis on accountId
                             2. Set active = false/true
 
@@ -83,12 +83,12 @@
 
                         4. Review Customer Feedback (feedback) ✅
                             1. add action string and change reviewStatus to true
-                        
+
             4. Admin Flow
 
                     1. Login as an Admin
 
-                    2. Functions - 
+                    2. Functions -
 
                         1. Add new bank employee (User) ✅
                             1. create new entry in user
