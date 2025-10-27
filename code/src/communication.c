@@ -4,6 +4,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+// TODO: server and client should only send 1 msg and then wait for response
+// Clear receive messages before sending
+
 /**
  * Send message using MSG_DELIM
  * Returns 0 on success, -1 on failure

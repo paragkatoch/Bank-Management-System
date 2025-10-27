@@ -79,6 +79,9 @@ int record__save(void *rec, size_t size, const char *filename)
     return (write_size == size) ? 0 : -1;
 }
 
+// TODO: update on pos and update using cmp
+// TODO: update all function for logging out everyone
+
 /**
  * Update record at position `pos`
  *

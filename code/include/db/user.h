@@ -37,7 +37,7 @@ void user_create_employee();
 void user_create_customer();
 
 // Update user details
-void user_update_user_details();
+void user_change_user_details();
 
 // View user details
 void user_view_user_details();
@@ -53,5 +53,8 @@ void user_deactivate_user();
 
 // Change user role
 void user_change_user_role();
+
+// Logout
+void user_logout();
 
 #endif

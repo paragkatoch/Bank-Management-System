@@ -13,21 +13,15 @@
 #define PORT 8080
 #define BUF_SIZE 1024
 
+// TODO: show socket address in connection closed message
 void handle_client(int cl_fd)
 {
     clientfd = cl_fd;
     user_login();
-    // char buffer[BUF_SIZE];
-    // int n;
 
-    // while ((n = read(cl_fd, buffer, BUF_SIZE - 1)) > 0) {
-    //     buffer[n] = '\0';
-    //     printf("Child %d received: %s\n", getpid(), buffer);
-    //     write(cl_fd, buffer, n);
-    // }
-    // close(cl_fd);
-    // printf("Child %d connection closed.\n", getpid());
-    // exit(0);
+    close(cl_fd);
+    printf("Child %d connection closed.\n", getpid());
+    exit(0);
 }
 
 int main()

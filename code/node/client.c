@@ -36,9 +36,16 @@ void client_run(int sock_fd)
             break;
         }
 
-        // ===== 1️⃣ Message from Server =====
-        if (fds[0].revents & POLLIN)
+        // Message from Server
+        if (fds[0].revents & (POLLIN | POLLHUP | POLLERR))
         {
+            // if server closed the connection
+            if (fds[0].revents & (POLLHUP | POLLERR))
+            {
+                printf("❌ Server closed connection.\n");
+                break;
+            }
+
             if (receive_message(sock_fd, &recv_buf) < 0)
             {
                 printf("❌ Server disconnected.\n");
@@ -49,7 +56,7 @@ void client_run(int sock_fd)
             recv_buf = NULL;
         }
 
-        // ===== 2️⃣ Input from Terminal =====
+        // Input from Terminal
         if (fds[1].revents & POLLIN)
         {
             if (fgets(send_buf, sizeof(send_buf), stdin) == NULL)
@@ -62,13 +69,13 @@ void client_run(int sock_fd)
 
             if (send_message(sock_fd, send_buf) < 0)
             {
-                printf("❌ Failed to send message.\n");
+                printf("Failed to send message.\n");
                 break;
             }
         }
     }
 
-    printf("🔴 Disconnected.\n");
+    printf("Disconnected.\n");
     close(sock_fd);
 }
 

@@ -18,5 +18,6 @@ extern int serverfd;
 
 // details of logged_in_user
 extern User logged_in_user;
+extern int logged_in_user_index;
 
 #endif

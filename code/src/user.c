@@ -7,6 +7,7 @@
 #include "file_operation.h"
 #include "db/user.h"
 #include "helper.h"
+#include "start_screen.h"
 
 // =======================================
 // User method Declarations
@@ -50,8 +51,9 @@ int __user_login_compare_username_password(void *rec, void *ctx)
     User *user = (User *)rec;
     __user_login_usernamePassword *login = (__user_login_usernamePassword *)ctx;
 
-    if (strcmp(user->username, login->username) == 0 &&
-        strcmp(user->password, login->password) == 0)
+    if ((strcmp(user->username, login->username) == 0) &&
+        (strcmp(user->password, login->password) == 0) &&
+        (user->session_active == 0))
     {
         return 1; // match found
     }
@@ -74,7 +76,15 @@ int __user_login_find_user_record(char *username, char *password)
     }
     else
     {
+        // TODO: mulitple session can be created since we don't lock from start to end
+        // soln use the update cmp function...if found the user with everything correct update its session there hehe
+
         logged_in_user = tempUser;
+        logged_in_user.session_active = 1;
+
+        logged_in_user_index = index;
+        record__update(&logged_in_user, sizeof(logged_in_user), USER_DB, logged_in_user_index);
+
         return 1;
     }
 }
@@ -100,7 +110,11 @@ void user_login()
         // --- Username ---
         send_message(fd, "Enter username (-1 to go back): ");
         if (receive_message(fd, &username) < 0)
+        {
+            send_message(fd, "Internal server error");
             break;
+        }
+
         if (strcmp(username, "-1") == 0)
         {
             free(username);
@@ -111,6 +125,7 @@ void user_login()
         send_message(fd, "Enter password (-1 to go back): ");
         if (receive_message(fd, &password) < 0)
         {
+            send_message(fd, "Internal server error");
             free(username);
             break;
         }
@@ -121,8 +136,7 @@ void user_login()
             break;
         }
 
-        // ===== Placeholder for verification =====
-        int login_successful = __user_login_find_user_record(username, password); // Replace with your actual check
+        int login_successful = __user_login_find_user_record(username, password);
 
         if (login_successful)
         {
@@ -131,22 +145,21 @@ void user_login()
             send_message(fd, "Proceeding");
 
             // Simple timer
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 3; i++)
             {
                 send_message(fd, ".");
                 fflush(stdout);
                 sleep(1);
             }
-            send_message(fd, "\n");
             free(username);
             free(password);
-            break;
+            return showStartScreen();
         }
         else
         {
             attempts--;
             char msg[128];
-            snprintf(msg, sizeof(msg), "\nLogin failed! ❌ Attempts left: %d", attempts);
+            snprintf(msg, sizeof(msg), "\nLogin failed!. Attempts left: %d", attempts);
             send_message(fd, msg);
             sleep(2);
 
@@ -157,15 +170,40 @@ void user_login()
 }
 
 // Create and save new user
-void user_create_employee();
+void user_create_employee() {}
 
-void user_create_customer();
+void user_create_customer() {}
 
 // Update user details
-void user_update_user_details();
+void user_change_user_details() {}
 
 // View user details
-void user_view_user_details();
+void user_view_user_details() {}
 
 // Change Password
-void user_change_password();
+void user_change_password() {}
+
+// Activate user
+void user_activate_user() {}
+
+// Deactivate user
+void user_deactivate_user() {}
+
+// Change user role
+void user_change_user_role() {}
+
+// Logout
+void user_logout()
+{
+    logged_in_user.session_active = 0;
+    record__update(&logged_in_user, sizeof(logged_in_user), USER_DB, logged_in_user_index);
+
+    logged_in_user = (User){0};
+    logged_in_user_index = -1;
+    // memset(&logged_in_user, 0, sizeof(logged_in_user));
+    return user_login();
+}
+
+// void user_logout_everyone(){
+
+// }
