@@ -384,10 +384,6 @@ void user_change_user_details()
     sleep(2);
     goto cleanup;
 
-cancel:
-    send_message(fd, "\n Update cancelled.\n");
-    sleep(2);
-
 cleanup:
     free(name);
     free(address);
@@ -436,14 +432,14 @@ void user_change_user_role()
 
     if (index == -1)
     {
-        send_message(fd, " User not found.\n");
+        send_message(fd, "User not found.\n");
         sleep(2);
         goto cleanup;
     }
 
-    send_message(fd, "\n Choose the new role for the user:\n");
-    send_message(fd, "   1- Admin\n   2- Employee\n   3- Manager\n");
-    send_message(fd, "   (Enter the corresponding number, or 0 to skip, -1 to cancel)\n");
+    send_message(fd, "\nChoose the new role for the user:\n");
+    send_message(fd, "1- Admin\n2- Employee\n3- Manager\n");
+    send_message(fd, "(Enter the corresponding number, or 0 to skip, -1 to cancel)\n");
 
     // ROLE
     int res = prompt_user_input_update(fd, "\n Enter your choice: ", &role);
@@ -461,9 +457,9 @@ void user_change_user_role()
     // This is where the user's updated data is written back to the USER_DB file.
 
     if (update_status == 0)
-        send_message(fd, "\n✅ User role updated successfully!\n");
+        send_message(fd, "\nUser role updated successfully!\n");
     else
-        send_message(fd, "\n⚠️ Error updating role in database.\n");
+        send_message(fd, "\nError updating role in database.\n");
 
     sleep(2);
     goto cleanup;
