@@ -24,24 +24,6 @@ void create_admin()
     printf("Password: %s\n", user.password);
 }
 
-int true_func(void *a, void *b)
-{
-    return 1;
-}
-
-void update_session(void *val)
-{
-    User *user = (User *)val;
-    user->session_active = 0;
-}
-
-void logout_everyone()
-{
-    printf("\nLogging out everyone before starting");
-    User user;
-    record__search_and_update_cont(&user, sizeof(user), USER_DB, &true_func, NULL, &update_session);
-}
-
 /**
  * Initialize db's and inital users
  */
@@ -59,8 +41,8 @@ int init()
         close(fd);
 
         // logout everyone from last run
-        logout_everyone();
-        return -1;
+        user_logout_everyone();
+        return 0;
     }
 
     printf("User database doesn't exists. Creating...\n");

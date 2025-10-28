@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include "string.h"
 #include "config.h"
@@ -68,26 +69,26 @@ void admin_start_screen()
 
         if (receive_message(fd, &response) < 0)
         {
+            free(response);
             return server_error();
         }
-        else if (strcmp(response, "1") == 0)
+
+        switch (response[0])
         {
-            return user_create_employee();
-        }
-        else if (strcmp(response, "2") == 0)
-        {
-            return user_change_user_details();
-        }
-        else if (strcmp(response, "3") == 0)
-        {
-            return user_change_user_role();
-        }
-        else if (strcmp(response, "0") == 0)
-        {
+        case '0':
+            free(response);
             return user_logout();
-        }
-        else
-        {
+        case '1':
+            free(response);
+            return user_create_employee();
+        case '2':
+            free(response);
+            return user_change_user_details();
+        case '3':
+            free(response);
+            return user_change_user_role();
+        default:
+            free(response);
             send_message(fd, "\n Invalid choice... Try again\n\n");
             sleep(2);
         }

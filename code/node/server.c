@@ -6,9 +6,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
-#include "../include/config.h"
-#include "../include/db/user.h"
-#include "../include/init.h"
+#include "config.h"
+#include "db/user.h"
+#include "init.h"
+#include "communication.h"
 
 #define PORT 8080
 #define BUF_SIZE 1024
@@ -17,6 +18,9 @@ void handle_client(int cl_fd, char *client_address)
 {
     clientfd = cl_fd;
     user_login();
+
+    send_message(cl_fd, "\nExiting...");
+    sleep(2);
 
     close(cl_fd);
     printf("Child %s connection closed.\n", client_address);

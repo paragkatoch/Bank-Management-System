@@ -57,4 +57,7 @@ void user_change_user_role();
 // Logout
 void user_logout();
 
+// Logout everyone
+void user_logout_everyone();
+
 #endif

@@ -1,8 +1,5 @@
 {
 	"files.associations": {
-		"communication.h": "c",
-		"string.h": "c",
-		"stddef.h": "c",
-		"helper.h": "c"
+		"config.h": "c"
 	}
 }
