@@ -1,3 +1,10 @@
+// server.c
+//============================================================================
+
+// This file contains the server logic to connect and handle clients
+
+//============================================================================
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

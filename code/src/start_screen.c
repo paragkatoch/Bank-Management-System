@@ -1,3 +1,10 @@
+// start_screen.c
+//============================================================================
+
+// This file contains UI and logic for start screen of every user
+
+//============================================================================
+
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -8,13 +15,7 @@
 #include "helper.h"
 #include "start_screen.h"
 
-/*
- *		This file contains UI and logic for start screen of every user
- */
-
-/**
- *
- */
+// UI - show appropriate start sceen to user based on role
 void showStartScreen()
 {
     if (!logged_in_user.session_active)
@@ -43,12 +44,9 @@ void showStartScreen()
     }
 }
 
-/**
- *
- */
+// UI - start screen for admin user
 void admin_start_screen()
 {
-    // TODO: add try catch in whole code
     int fd = clientfd;
 
     while (1)
@@ -96,5 +94,7 @@ void admin_start_screen()
 }
 
 void manager_start_screen() {}
+
 void employee_start_screen() {}
+
 void customer_start_screen() {}

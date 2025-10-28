@@ -1,3 +1,10 @@
+// user.h
+//============================================================================
+
+// This file contains logic and UI related to user
+
+//============================================================================
+
 #ifndef User_H
 #define User_H
 
@@ -26,38 +33,19 @@ typedef struct
 // =======================================
 
 // init user
-void init_user(User *user, int userId, int role, int s_a, int a_a, char *name, char *age, char *address, char *phone, char *username, char *password);
 
-// Login
 void user_login();
-
-// Create and save new user
 void user_create_employee();
-
 void user_create_customer();
-
-// Update user details
 void user_change_user_details();
-
-// View user details
 void user_view_user_details();
-
-// Change Password
 void user_change_password();
-
-// Activate user
 void user_activate_user();
-
-// Deactivate user
 void user_deactivate_user();
-
-// Change user role
 void user_change_user_role();
 
-// Logout
 void user_logout();
-
-// Logout everyone
 void user_logout_everyone();
+void init_user(User *user, int userId, int role, int s_a, int a_a, char *name, char *age, char *address, char *phone, char *username, char *password);
 
 #endif

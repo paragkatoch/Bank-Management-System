@@ -1,3 +1,10 @@
+// communcation.c
+//============================================================================
+
+// This file contains logic for communicating between client and server
+
+//============================================================================
+
 #include "communication.h"
 #include "config.h"
 #include <unistd.h>

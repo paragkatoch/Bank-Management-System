@@ -1,3 +1,10 @@
+// communication.h
+//============================================================================
+
+// This file contains logic for communicating between client and server
+
+//============================================================================
+
 #include <stddef.h>
 
 #ifndef COMMUNICATION_H

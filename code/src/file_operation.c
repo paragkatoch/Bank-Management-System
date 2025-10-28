@@ -1,3 +1,10 @@
+// file_operation.c
+//============================================================================
+
+// This file contains logic for locking, reading and writing to files
+
+//============================================================================
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,7 +15,9 @@
 #include "file_operation.h"
 
 // =====================================================
+
 // Lock Function
+
 // =====================================================
 
 // Lock unlock operation
@@ -48,16 +57,12 @@ int unlock_record(int fd, off_t start, size_t len)
 }
 
 // =====================================================
+
 // CRUD Functions
+
 // =====================================================
 
-/**
- * Save record
- *
- * Returns -
- *  - 0, on success
- *  - -1, on failure
- */
+// Save record
 int record__save(void *rec, size_t size, const char *filename)
 {
     int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
@@ -79,13 +84,7 @@ int record__save(void *rec, size_t size, const char *filename)
     return (write_size == size) ? 0 : -1;
 }
 
-/**
- * Update record at position `pos`
- *
- * Returns -
- *  - 0, on success
- *  - -1, on failure
- */
+// Update record at position `pos`
 int record__update(void *rec, size_t size, const char *filename, int pos)
 {
     int fd = open(filename, O_RDWR);
@@ -110,13 +109,7 @@ int record__update(void *rec, size_t size, const char *filename, int pos)
     return (write_size == size) ? 0 : -1;
 }
 
-/**
- * Search record
- *
- * Returns -
- *  - Pos, on sucess
- *  - -1, on failure
- */
+// Search record
 int record__search(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx)
 {
     int fd = open(filename, O_RDONLY);
@@ -148,6 +141,7 @@ int record__search(void *rec, size_t size, const char *filename, int (*cmp)(void
     return -1;
 }
 
+// Search and update a record using cmp, ctx and update
 int record__search_and_update(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *))
 {
     int fd = open(filename, O_RDWR);
@@ -195,6 +189,8 @@ int record__search_and_update(void *rec, size_t size, const char *filename, int 
     close(fd);
     return -1;
 }
+
+// Search and update records using cmp, ctx and update
 
 int record__search_and_update_cont(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *))
 {
@@ -248,13 +244,7 @@ int record__search_and_update_cont(void *rec, size_t size, const char *filename,
     return -1;
 }
 
-/**
- * Delete records
- *
- * Returns -
- *  - 0, on success
- *  - -1, on failure
- */
+// Delete records
 int record__delete(size_t size, const char *filename, int (*cmp)(void *))
 {
     int fd = open(filename, O_RDWR);

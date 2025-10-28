@@ -1,3 +1,10 @@
+// file_operation.h
+//============================================================================
+
+// This file contains logic for locking, reading and writing to files
+
+//============================================================================
+
 #include <sys/types.h>
 #include <stddef.h>
 

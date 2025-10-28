@@ -1,3 +1,10 @@
+// init.c
+//============================================================================
+
+// This file contains init function for the server
+
+//============================================================================
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +20,8 @@
 #define DEFAULT_USERNAME "admin"
 #define DEFAULT_PASSWORD "admin123"
 
-void create_admin()
+// Create default admin user
+static void __create_admin()
 {
     User user;
     init_user(&user, 1001, 1, 0, 1, DEFAULT_NAME, "23", "IIITB", "1000110001", DEFAULT_USERNAME, DEFAULT_PASSWORD);
@@ -24,9 +32,7 @@ void create_admin()
     printf("Password: %s\n", user.password);
 }
 
-/**
- * Initialize db's and inital users
- */
+// Initialize db's and inital users
 int init()
 {
     int fd;
@@ -50,7 +56,7 @@ int init()
     close(fd);
 
     // create admin user
-    create_admin();
+    __create_admin();
 
     return 0;
 }

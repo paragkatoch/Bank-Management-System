@@ -1,3 +1,10 @@
+// client.c
+//============================================================================
+
+// This file contains the client logic to connect and pass data between user and server
+
+//============================================================================
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

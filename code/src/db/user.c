@@ -1,3 +1,10 @@
+// user.c
+//============================================================================
+
+// This file contains logic and UI related to user
+
+//============================================================================
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -9,12 +16,10 @@
 #include "helper.h"
 #include "start_screen.h"
 
-// =======================================
-// User method Declarations
-// =======================================
-
 //============================================================================
+
 // Init User
+
 //============================================================================
 
 // Init User
@@ -36,7 +41,9 @@ void init_user(User *user, int userId, int role, int s_a, int a_a, char *name, c
 }
 
 //============================================================================
+
 // User Login
+
 //============================================================================
 
 // struct to contain username and password
@@ -45,14 +52,12 @@ typedef struct
     char username[20];
     char password[20];
 } __ul_user;
-
 // function to update session of User
 static void __ul_update_session(void *rec)
 {
     User *user = (User *)rec;
     user->session_active = 1;
 }
-
 // function to compare user with username, password and session
 static int __ul_cmp_user(void *rec, void *ctx)
 {
@@ -67,7 +72,6 @@ static int __ul_cmp_user(void *rec, void *ctx)
     }
     return 0; // no match
 }
-
 // function to find user on the basis of username and password
 static int __ul_find_user(char *username, char *password)
 {
@@ -91,7 +95,7 @@ static int __ul_find_user(char *username, char *password)
     }
 }
 
-// User login handler
+// UI - User login handler
 void user_login()
 {
     int fd = clientfd;
@@ -174,7 +178,9 @@ success:
 }
 
 //============================================================================
+
 // Create new employee
+
 //============================================================================
 
 // Create and save new user
@@ -260,14 +266,18 @@ cleanup:
 }
 
 //============================================================================
-// Create new customer
-//============================================================================
 
 // Create new customer
+
+//============================================================================
+
+// UI - Create new customer
 void user_create_customer() {}
 
 //============================================================================
+
 // Change User details
+
 //============================================================================
 
 // user login compare function for searching user record
@@ -283,14 +293,12 @@ static int __ucud_cmp_username(void *rec, void *ctx)
     }
     return 0; // no match
 }
-
 // find user record based only on username
 static int __ucud_find_user_with_username(char *username, User *tempUser)
 {
     int index = record__search(tempUser, sizeof(User), USER_DB, __ucud_cmp_username, username);
     return index;
 }
-
 // prompt user input
 static int __ucud_prompt_user_input_update(int fd, const char *message, char **out, char *original)
 {
@@ -314,7 +322,7 @@ static int __ucud_prompt_user_input_update(int fd, const char *message, char **o
     return 1;
 }
 
-// Change User details
+// UI - Change User details
 void user_change_user_details()
 {
     int fd = clientfd;
@@ -412,35 +420,45 @@ cleanup:
 }
 
 //============================================================================
-// View user details
-//============================================================================
 
 // View user details
+
+//============================================================================
+
+// UI - View user details
 void user_view_user_details() {}
 
 //============================================================================
-// Change Password
-//============================================================================
 
 // Change Password
+
+//============================================================================
+
+// UI - Change Password
 void user_change_password() {}
 
 //============================================================================
-// Activate user
-//============================================================================
 
 // Activate user
+
+//============================================================================
+
+// UI - Activate user
 void user_activate_user() {}
 
 //============================================================================
-// Deactivate user
-//============================================================================
 
 // Deactivate user
+
+//============================================================================
+
+// UI - Deactivate user
 void user_deactivate_user() {}
 
 //============================================================================
+
 // Change user role
+
 //============================================================================
 
 // prompt user input
@@ -457,7 +475,7 @@ static int __ucur_prompt_user_input_update(int fd, const char *message, char **o
     return 1;
 }
 
-// Change user role
+// UI - Change user role
 void user_change_user_role()
 {
 
@@ -515,7 +533,9 @@ cleanup:
 }
 
 //============================================================================
+
 // Logout
+
 //============================================================================
 
 // Logout
@@ -530,14 +550,17 @@ void user_logout()
 }
 
 //============================================================================
+
 // Logout everyone
+
 //============================================================================
 
+// return true for every cmp
 static int __ule_true_func(void *a, void *b)
 {
     return 1;
 }
-
+// update session to 0
 static void __ule_update_session(void *val)
 {
     User *user = (User *)val;

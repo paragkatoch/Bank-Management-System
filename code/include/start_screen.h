@@ -1,6 +1,9 @@
-/*
- *		This file contains UI and logic for start screen of every user
- */
+// start_screen.h
+//============================================================================
+
+// This file contains UI and logic for start screen of every user
+
+//============================================================================
 
 #ifndef START_SCREEN_H
 #define START_SCREEN_H
