@@ -11,6 +11,19 @@
 // =======================================
 // User Record Structure
 // =======================================
+
+// user roles
+#define ADMIN_ROLE 1
+#define EMPLOYEE_ROLE 2
+#define MANAGER_ROLE 3
+#define CUSTOMER_ROLE 4
+
+#define SESSION_ACTIVE 1
+#define SESSION_INACTIVE 0
+
+#define ACCOUNT_ACTIVE 1
+#define ACCOUNT_INACTIVE 0
+
 typedef struct
 {
     int userId;
@@ -37,7 +50,7 @@ typedef struct
 void user_login();
 void user_create_employee();
 void user_create_customer();
-void user_change_user_details();
+void user_change_user_details(int customerOnly);
 void user_view_user_details();
 void user_change_password();
 void user_activate_user();

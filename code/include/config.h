@@ -11,8 +11,12 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
-// User db location
+// db locations
 #define USER_DB "db/user.dat"
+#define ACCOUNT_DB "db/account.dat"
+#define LOAN_DB "db/loan.dat"
+#define TRANSACTION_DB "db/transaction.dat"
+#define FEEDBACK_DB "db/feedback.dat"
 
 // communication message deliminator
 #define MSG_DELIM "/|/"

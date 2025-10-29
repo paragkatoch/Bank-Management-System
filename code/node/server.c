@@ -55,6 +55,13 @@ int main()
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(PORT);
 
+    // port reuse
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+    {
+        perror("setsockopt(SO_REUSEADDR) failed");
+    }
+
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
     {
         perror("bind");

@@ -8,9 +8,17 @@
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include "communication.h"
 #include "config.h"
 #include "db/user.h"
+#include "db/loan.h"
+#include "db/transaction.h"
+#include "db/feedback.h"
+#include "file_operation.h"
+#include <stdarg.h>
+#include "helper.h"
+#include <stdio.h>
 
 // Copy src to dest string and set end deliminator
 void safe_strncpy(char *dest, const char *src, size_t n)
@@ -40,4 +48,54 @@ void server_error()
     send_message(clientfd, "Logging out...");
     sleep(1);
     user_logout();
+}
+
+char *makeString(const char *fmt, ...)
+{
+    static char buffer[1000]; // or malloc for dynamic
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    return buffer;
+}
+
+int generateUniqueUserId()
+{
+    User tempUser;
+    if (record_end_record(&tempUser, sizeof(User), USER_DB) == -1)
+        return 1;
+
+    int maxId = tempUser.userId;
+    return maxId + 1;
+}
+
+int generateUniqueLoanId()
+{
+    Loan tempLoan;
+    if (record_end_record(&tempLoan, sizeof(Loan), LOAN_DB) == -1)
+        return 1;
+
+    int maxId = tempLoan.loanId;
+    return maxId + 1;
+}
+
+int generateUniqueFeedbackId()
+{
+    Feedback tempFeedback;
+    if (record_end_record(&tempFeedback, sizeof(Feedback), FEEDBACK_DB) == -1)
+        return 1;
+
+    int maxId = tempFeedback.feedbackId;
+    return maxId + 1;
+}
+
+int generateUniqueTransactionId()
+{
+    Transaction tempTransaction;
+    if (record_end_record(&tempTransaction, sizeof(Transaction), TRANSACTION_DB) == -1)
+        return 1;
+
+    int maxId = tempTransaction.transactionId;
+    return maxId + 1;
 }

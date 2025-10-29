@@ -141,6 +141,55 @@ int record__search(void *rec, size_t size, const char *filename, int (*cmp)(void
     return -1;
 }
 
+int record__search_cont(void **recs, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx)
+{
+    int fd = open(filename, O_RDONLY);
+    if (fd == -1)
+        return -1;
+
+    if (lock_file(fd, F_RDLCK) == -1)
+    {
+        close(fd);
+        return -1;
+    }
+
+    ssize_t n;
+    int index = 0;
+    int buff_size = size;
+    void *rec = malloc(size);
+    *recs = (char *)malloc((size_t)buff_size);
+
+    while ((n = read(fd, rec, size)) == size)
+    {
+        if (index * size >= buff_size)
+        {
+            buff_size *= 2;
+            void *temp = (char *)realloc(*recs, buff_size);
+
+            if (!temp)
+            {
+                free(temp);
+                free(rec);
+                unlock_file(fd);
+                close(fd);
+                return -1;
+            }
+
+            *recs = temp;
+        }
+        if (cmp(rec, ctx))
+        {
+            memcpy((char *)*recs + (index * size), rec, size);
+            index++;
+        }
+    }
+
+    unlock_file(fd);
+    close(fd);
+    free(rec);
+    return index;
+}
+
 // Search and update a record using cmp, ctx and update
 int record__search_and_update(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *))
 {
@@ -191,7 +240,6 @@ int record__search_and_update(void *rec, size_t size, const char *filename, int 
 }
 
 // Search and update records using cmp, ctx and update
-
 int record__search_and_update_cont(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *))
 {
     int fd = open(filename, O_RDWR);
@@ -338,4 +386,41 @@ int record__delete(size_t size, const char *filename, int (*cmp)(void *))
     unlink(tmpname);
 
     return 0;
+}
+
+// Get last record
+int record_end_record(void *rec, size_t size, const char *filename)
+{
+    int fd = open(filename, O_RDONLY);
+    if (fd == -1)
+        return -1;
+
+    if (lock_file(fd, F_RDLCK) == -1)
+    {
+        close(fd);
+        return -1;
+    }
+
+    off_t offset = (off_t)-1 * size;
+
+    if (lseek(fd, offset, SEEK_END) == -1)
+    {
+        goto failure;
+    }
+
+    ssize_t n;
+
+    if ((n = read(fd, rec, size)) != size)
+    {
+        goto failure;
+    }
+
+    unlock_file(fd);
+    close(fd);
+    return 0;
+
+failure:
+    unlock_file(fd);
+    close(fd);
+    return -1;
 }

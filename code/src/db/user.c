@@ -15,6 +15,7 @@
 #include "db/user.h"
 #include "helper.h"
 #include "start_screen.h"
+#include "db/account.h"
 
 //============================================================================
 
@@ -66,7 +67,8 @@ static int __ul_cmp_user(void *rec, void *ctx)
 
     if ((strcmp(user->username, login->username) == 0) &&
         (strcmp(user->password, login->password) == 0) &&
-        (user->session_active == 0))
+        (user->session_active == 0) &&
+        (user->account_active == 1))
     {
         return 1; // match found
     }
@@ -217,10 +219,10 @@ void user_create_employee()
     char *password = NULL;
     char *age = NULL;
 
-    int userId = 2001;      // auto-generate
-    int role = 2;           // 1 = admin, 2 = employee
-    int session_active = 0; // not logged in
-    int account_active = 1; // account active
+    int userId = generateUniqueUserId();
+    int role = EMPLOYEE_ROLE;
+    int session_active = SESSION_INACTIVE;
+    int account_active = ACCOUNT_ACTIVE;
 
     clear_terminal(fd);
     send_message(fd, "\n=====================================\n");
@@ -272,7 +274,69 @@ cleanup:
 //============================================================================
 
 // UI - Create new customer
-void user_create_customer() {}
+void user_create_customer()
+{
+    int fd = clientfd;
+    User user;
+    char *name = NULL;
+    char *address = NULL;
+    char *phone = NULL;
+    char *username = NULL;
+    char *password = NULL;
+    char *age = NULL;
+    char *principalBalance = NULL;
+
+    int userId = generateUniqueUserId(); // auto-generate
+    int role = CUSTOMER_ROLE;
+    int session_active = SESSION_INACTIVE;
+    int account_active = ACCOUNT_ACTIVE;
+
+    clear_terminal(fd);
+    send_message(fd, "\n=====================================\n");
+    send_message(fd, "     Customer Creation Portal        \n");
+    send_message(fd, "=====================================\n");
+
+    send_message(fd, "\n Use -1 to cancel \n\n");
+
+    // get updated details
+    if (__uce_prompt_user_input(fd, "\nEnter Customer name: ", &name) != 0 ||
+        __uce_prompt_user_input(fd, "\nEnter Customer age: ", &age) != 0 ||
+        __uce_prompt_user_input(fd, "\nEnter Customer address: ", &address) != 0 ||
+        __uce_prompt_user_input(fd, "\nEnter phone number: ", &phone) != 0 ||
+        __uce_prompt_user_input(fd, "\nEnter username: ", &username) != 0 ||
+        __uce_prompt_user_input(fd, "\nEnter password: ", &password) != 0 ||
+        __uce_prompt_user_input(fd, "\nEnter Account Balance: ", &principalBalance) != 0)
+        goto cleanup;
+
+    // create user with new details
+    init_user(&user, userId, role, session_active, account_active,
+              name, age, address, phone, username, password);
+
+    account_create_account(userId, atoi(principalBalance));
+
+    clear_terminal(fd);
+
+    send_message(fd, "\nCustomer account created successfully!\n");
+
+    // save user to db
+    if (record__save(&user, sizeof(User), USER_DB) != 0)
+        send_message(fd, "Unable to save Customer details in database.\n");
+    else
+        send_message(fd, "Customer details saved to database.\n");
+
+    send_message(fd, "\n\n\nPress enter to continue...");
+    receive_message(fd, &name);
+
+    // cleanup
+cleanup:
+    free(name);
+    free(age);
+    free(address);
+    free(phone);
+    free(username);
+    free(password);
+    return showStartScreen();
+}
 
 //============================================================================
 
@@ -323,7 +387,7 @@ static int __ucud_prompt_user_input_update(int fd, const char *message, char **o
 }
 
 // UI - Change User details
-void user_change_user_details()
+void user_change_user_details(int customerOnly)
 {
     int fd = clientfd;
     User user;
@@ -347,6 +411,13 @@ void user_change_user_details()
     if (index == -1)
     {
         send_message(fd, "\nUser not found.\n");
+        sleep(2);
+        goto cleanup;
+    }
+
+    if (customerOnly == 1 && user.role != CUSTOMER_ROLE)
+    {
+        send_message(fd, "\nEnter valid customer username");
         sleep(2);
         goto cleanup;
     }
@@ -443,8 +514,63 @@ void user_change_password() {}
 
 //============================================================================
 
+// compare by userId
+static int __uacu_cmp_userid(void *rec, void *ctx)
+{
+    User *user = (User *)rec;
+    int *id = (int *)ctx;
+    return user->userId == *id;
+}
+
 // UI - Activate user
-void user_activate_user() {}
+void user_activate_user()
+{
+
+    int fd = clientfd;
+    User user;
+    char *userId_str = NULL;
+
+    clear_terminal(fd);
+    send_message(fd, "=====================================\n");
+    send_message(fd, "          Activate User Account      \n");
+    send_message(fd, "=====================================\n");
+
+    // Get userId input
+    if (__uce_prompt_user_input(fd, "\nEnter User ID to activate (-1 to cancel): ", &userId_str) != 0)
+        goto cleanup;
+
+    int userId = atoi(userId_str);
+    int index = record__search(&user, sizeof(User), USER_DB, __uacu_cmp_userid, &userId);
+
+    if (index == -1)
+    {
+        send_message(fd, "\nUser not found.\n");
+        sleep(2);
+        goto cleanup;
+    }
+
+    // check if already active
+    if (user.account_active == 1)
+    {
+        send_message(fd, "\nThis user account is already active.\n");
+        sleep(2);
+        goto cleanup;
+    }
+
+    user.account_active = 1; // activate user
+
+    if (record__update(&user, sizeof(User), USER_DB, index) == 0)
+        send_message(fd, "\nUser account activated successfully!\n");
+    else
+        send_message(fd, "\nError activating user account.\n");
+
+    send_message(fd, "\n\n\nPress enter to continue...");
+    receive_message(fd, &userId_str);
+
+cleanup:
+    free(userId_str);
+    return showStartScreen();
+}
 
 //============================================================================
 
@@ -453,7 +579,54 @@ void user_activate_user() {}
 //============================================================================
 
 // UI - Deactivate user
-void user_deactivate_user() {}
+void user_deactivate_user()
+{
+
+    int fd = clientfd;
+    User user;
+    char *userId_str = NULL;
+
+    clear_terminal(fd);
+    send_message(fd, "=====================================\n");
+    send_message(fd, "         Deactivate User Account     \n");
+    send_message(fd, "=====================================\n");
+
+    // Get userId input
+    if (__uce_prompt_user_input(fd, "\nEnter User ID to deactivate (-1 to cancel): ", &userId_str) != 0)
+        goto cleanup;
+
+    int userId = atoi(userId_str);
+    int index = record__search(&user, sizeof(User), USER_DB, __uacu_cmp_userid, &userId);
+
+    if (index == -1)
+    {
+        send_message(fd, "\nUser not found.\n");
+        sleep(2);
+        goto cleanup;
+    }
+
+    // check if already inactive
+    if (user.account_active == 0)
+    {
+        send_message(fd, "\nThis user account is already deactivated.\n");
+        sleep(2);
+        goto cleanup;
+    }
+
+    user.account_active = 0; // deactivate
+
+    if (record__update(&user, sizeof(User), USER_DB, index) == 0)
+        send_message(fd, "\nUser account deactivated successfully!\n");
+    else
+        send_message(fd, "\nError deactivating user account.\n");
+
+    send_message(fd, "\n\n\nPress enter to continue...");
+    receive_message(fd, &userId_str);
+
+cleanup:
+    free(userId_str);
+    return showStartScreen();
+}
 
 //============================================================================
 

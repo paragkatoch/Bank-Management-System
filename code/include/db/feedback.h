@@ -4,14 +4,19 @@
 // =======================================
 // Feedback Record Structure
 // =======================================
-typedef struct {
+
+#define FEEDBACK_NOT_REVIEWED 0
+#define FEEDBACK_REVIEWED 1
+
+typedef struct
+{
     int feedbackId;
     int userId;
     char feedback[1000];
     char action[1000];
-    bool reviewStatus;
-    int created_timestamp;
-    int updated_timestamp;
+    int reviewStatus;
+    // int created_timestamp;
+    // int updated_timestamp;
 } Feedback;
 
 // =======================================

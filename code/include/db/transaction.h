@@ -4,13 +4,16 @@
 // =======================================
 // Transaction Record Structure
 // =======================================
-typedef struct {
+typedef struct
+{
     int transactionId;
+    int previousAmount;
     int transactionAmount;
+    int lastAmount;
     int from_uid;
     int to_uid;
-    bool transactionStatus;
-    int transaction_time;
+    // bool transactionStatus;
+    // int transaction_time;
 } Transaction;
 
 // =======================================
@@ -18,21 +21,15 @@ typedef struct {
 // =======================================
 
 // create and save transaction
-void transaction_create_transaction();
+int transaction_save_transaction(int from_uid, int to_uid, int prev_amount, int amount, int last_amount);
 
 // view Transaction details
-void transaction_view_transaction_details();
+void transaction_view_transactions();
 
 // view user transaction
 void transaction_view_user_transaction();
 
 // view all transactions
 void transaction_view_all_transaction();
-
-// view non review transaction
-void transaction_view_non_reviewed_transaction();
-
-// review transaction
-void transaction_review_transaction();
 
 #endif

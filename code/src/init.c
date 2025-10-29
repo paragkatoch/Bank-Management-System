@@ -24,12 +24,32 @@
 static void __create_admin()
 {
     User user;
-    init_user(&user, 1001, 1, 0, 1, DEFAULT_NAME, "23", "IIITB", "1000110001", DEFAULT_USERNAME, DEFAULT_PASSWORD);
+    init_user(&user, 1, 1, 0, 1, DEFAULT_NAME, "23", "IIITB", "1000110001", DEFAULT_USERNAME, DEFAULT_PASSWORD);
     record__save(&user, sizeof(user), USER_DB);
 
     printf("User database initialized with default admin account\n");
     printf("Username: %s\n", user.username);
     printf("Password: %s\n", user.password);
+}
+
+static void __create_db_files()
+{
+    int fd;
+
+    fd = open(ACCOUNT_DB, O_CREAT, 0644);
+    close(fd);
+
+    fd = open(FEEDBACK_DB, O_CREAT, 0644);
+    close(fd);
+
+    fd = open(LOAN_DB, O_CREAT, 0644);
+    close(fd);
+
+    fd = open(TRANSACTION_DB, O_CREAT, 0644);
+    close(fd);
+
+    fd = open(USER_DB, O_CREAT, 0666);
+    close(fd);
 }
 
 // Initialize db's and inital users
@@ -52,8 +72,7 @@ int init()
     }
 
     printf("User database doesn't exists. Creating...\n");
-    fd = open(USER_DB, O_CREAT, 0666);
-    close(fd);
+    __create_db_files();
 
     // create admin user
     __create_admin();
