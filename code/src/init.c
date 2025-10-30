@@ -16,20 +16,40 @@
 #include "config.h"
 #include "db/user.h"
 
-#define DEFAULT_NAME "Admin"
-#define DEFAULT_USERNAME "admin"
-#define DEFAULT_PASSWORD "admin123"
-
 // Create default admin user
 static void __create_admin()
 {
     User user;
-    init_user(&user, 1, 1, 0, 1, DEFAULT_NAME, "23", "IIITB", "1000110001", DEFAULT_USERNAME, DEFAULT_PASSWORD);
+    init_user(&user, 1, ADMIN_ROLE, 0, 1, "Admin", "23", "IIITB", "1000110001", "admin", "admin123");
     record__save(&user, sizeof(user), USER_DB);
 
     printf("User database initialized with default admin account\n");
-    printf("Username: %s\n", user.username);
-    printf("Password: %s\n", user.password);
+}
+
+static void __create_employees()
+{
+    User employee1;
+    User employee2;
+    User employee3;
+    User employee4;
+
+    init_user(&employee1, 2, EMPLOYEE_ROLE, 0, 1, "Devanshi", "23", "IIITB", "1000110001", "devanshi", "12345");
+    init_user(&employee2, 3, EMPLOYEE_ROLE, 0, 1, "Diksha", "23", "IIITB", "1000110001", "diksha", "12345");
+    init_user(&employee3, 4, EMPLOYEE_ROLE, 0, 1, "Parag", "23", "IIITB", "1000110001", "parag", "12345");
+    init_user(&employee4, 5, MANAGER_ROLE, 0, 1, "Manager", "23", "IIITB", "1000110001", "manager", "manager123");
+
+    record__save(&employee1, sizeof(User), USER_DB);
+    record__save(&employee2, sizeof(User), USER_DB);
+    record__save(&employee3, sizeof(User), USER_DB);
+    record__save(&employee4, sizeof(User), USER_DB);
+
+    printf("User database initialized with default employee accounts\n");
+}
+
+static void __create_accounts()
+{
+    __create_admin();
+    __create_employees();
 }
 
 static void __create_db_files()
@@ -75,7 +95,7 @@ int init()
     __create_db_files();
 
     // create admin user
-    __create_admin();
+    __create_accounts();
 
     return 0;
 }
