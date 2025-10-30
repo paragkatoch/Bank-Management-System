@@ -99,3 +99,29 @@ int generateUniqueTransactionId()
     int maxId = tempTransaction.transactionId;
     return maxId + 1;
 }
+
+void waitTillEnter(int fd)
+{
+    char *tmp = NULL;
+    send_message(fd, "\n\n\nPress enter to go back...");
+    receive_message(fd, &tmp);
+    free(tmp);
+}
+
+int prompt_user_input(int fd, const char *message, char **out)
+{
+    send_message(fd, message);
+    if (receive_message(fd, out) < 0)
+    {
+        send_message(fd, "\nError receiving input.\n");
+        sleep(2);
+        return -2;
+    }
+
+    if (strcmp(*out, "-1") == 0)
+    {
+        return -1;
+    }
+
+    return 0;
+}

@@ -17,6 +17,7 @@
 #include "db/user.h"
 #include "init.h"
 #include "communication.h"
+#include "helper.h"
 
 #define PORT 8080
 #define BUF_SIZE 1024
@@ -27,7 +28,7 @@ void handle_client(int cl_fd, char *client_address)
     user_login();
 
     send_message(cl_fd, "\nExiting...");
-    sleep(2);
+    sleep(1);
 
     close(cl_fd);
     printf("Child %s connection closed.\n", client_address);
@@ -87,17 +88,13 @@ int main()
             continue;
         }
 
-        char client_address[100]; // or bigger if you want
-
-        snprintf(client_address, sizeof(client_address), "%s:%d", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
-
-        printf("New client connected: %s\n", client_address);
+        printf("New client connected: %s\n", makeString("%s:%d", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port)));
 
         pid_t pid = fork();
         if (pid == 0)
         {
             close(server_fd); // Child does not need listening socket
-            handle_client(client_fd, client_address);
+            handle_client(client_fd, makeString("%s:%d", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port)));
         }
         else if (pid > 0)
         {

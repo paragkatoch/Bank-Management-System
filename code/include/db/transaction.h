@@ -1,3 +1,11 @@
+// transaction.h
+
+//============================================================================
+
+// This file contains logic and UI related to transactions
+
+//============================================================================
+
 #ifndef Transaction_H
 #define Transaction_H
 
@@ -24,12 +32,6 @@ typedef struct
 int transaction_save_transaction(int from_uid, int to_uid, int prev_amount, int amount, int last_amount);
 
 // view Transaction details
-void transaction_view_transactions();
-
-// view user transaction
-void transaction_view_user_transaction();
-
-// view all transactions
-void transaction_view_all_transaction();
+void transaction_view_transactions(int loggedUser);
 
 #endif

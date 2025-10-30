@@ -1,3 +1,11 @@
+// loan.c
+
+//============================================================================
+
+// This file contains logic and UI related to loans
+
+//============================================================================
+
 #include "db/loan.h"
 #include "config.h"
 #include "helper.h"
@@ -9,35 +17,18 @@
 #include "start_screen.h"
 #include <unistd.h>
 
-// Create and save new user
-static int __lcl_prompt_user_input(int fd, const char *message, char **out)
-{
-    send_message(fd, message);
-    if (receive_message(fd, out) < 0)
-    {
-        send_message(fd, "\nError receiving input.\n");
-        sleep(2);
-        return -2;
-    }
-
-    if (strcmp(*out, "-1") == 0)
-    {
-        send_message(fd, "\nOperation cancelled by user.\n");
-        sleep(2);
-        return -1;
-    }
-
-    return 0;
-}
+//============================================================================
 
 // Create and save new loan
+
+//============================================================================
+
 void loan_create_loan()
 {
     int fd = clientfd;
 
     Loan newLoan;
     char *loanAmount = NULL;
-    int loanId = 1001;
 
     clear_terminal(fd);
     send_message(fd, "\n=====================================\n");
@@ -47,7 +38,7 @@ void loan_create_loan()
     send_message(fd, "\n Use -1 to cancel \n\n");
 
     // get updated details
-    if (__lcl_prompt_user_input(fd, "\nEnter loan amount: ", &loanAmount) != 0)
+    if (prompt_user_input(fd, "\nEnter loan amount: ", &loanAmount) != 0)
         goto cleanup;
 
     newLoan.loanId = generateUniqueLoanId();
@@ -60,12 +51,11 @@ void loan_create_loan()
 
     // save user to db
     if (record__save(&newLoan, sizeof(Loan), LOAN_DB) != 0)
-        send_message(fd, "Oops...something went wrong\n");
+        send_message(fd, "\n\nOops...something went wrong\n");
     else
-        send_message(fd, "Applied for loan successfully.\n");
+        send_message(fd, "\n\nApplied for loan successfully.\n");
 
-    send_message(fd, "\n\n\nPress enter to continue...");
-    receive_message(fd, &loanAmount);
+    waitTillEnter(fd);
 
     // cleanup
 cleanup:
@@ -73,25 +63,22 @@ cleanup:
     return showStartScreen();
 }
 
-int __lvls_cmp(void *rec, void *ctx)
+//============================================================================
+
+// View loan status
+
+//============================================================================
+
+static int __find_loan_based_on_account_id(void *rec, void *ctx)
 {
     Loan *tempLoan = (Loan *)rec;
-    int userId = *(int *)ctx;
+    int accountId = *(int *)ctx;
 
-    return tempLoan->accountID == userId ? 1 : 0;
+    return tempLoan->accountID == accountId ? 1 : 0;
 }
-// View loan status
-void loan_view_loan_status()
+
+static void __display_my_loans(int fd, int count, Loan *loansBits)
 {
-    int fd = clientfd;
-    int accountId = logged_in_user.userId;
-
-    void *loansBits = NULL;
-    int count = record__search_cont(&loansBits, sizeof(Loan), LOAN_DB, &__lvls_cmp, &accountId);
-
-    if (count == -1)
-        goto failure;
-
     Loan *loans = (Loan *)loansBits;
 
     clear_terminal(fd);
@@ -110,9 +97,6 @@ void loan_view_loan_status()
 
         switch (loanStatusInt)
         {
-        case LOAN_PROCESSED:
-            strcpy(loanStatus, "Processed");
-            break;
         case LOAN_APPROVED:
             strcpy(loanStatus, "Approved");
             break;
@@ -124,46 +108,331 @@ void loan_view_loan_status()
             break;
         }
 
-        char buffer[128];
-        snprintf(buffer, sizeof(buffer),
-                 "\n%d\t\t\t%d\t\t\t%s",
-                 loanId, loanAmount, loanStatus);
-
-        send_message(fd, buffer);
+        send_message(fd, makeString("\n%d\t\t\t%d\t\t\t%s",
+                                    loanId, loanAmount, loanStatus));
     }
+}
 
-    char *tmp = NULL;
-    send_message(fd, "\n\n\nPress enter to go back...");
-    receive_message(fd, &tmp);
-    free(tmp);
+// View loan status
+void loan_view_loan_status()
+{
+    int fd = clientfd;
+    int accountId = logged_in_user.userId;
 
-failure:
+    void *loansBits = NULL;
+    int count = record__search_cont(&loansBits, sizeof(Loan), LOAN_DB, &__find_loan_based_on_account_id, &accountId);
+    if (count == -1)
+        goto cleanup;
+
+    __display_my_loans(fd, count, loansBits);
+    waitTillEnter(fd);
+
+cleanup:
     free(loansBits);
     return showStartScreen();
 }
 
-// Assign loan
-void loan_assign_loan_to_an_employee() {}
-
-// View all loans
-void loan_view_all_loans() {}
-
-// View user loans
-void loan_view_user_loans() {}
-
-// View non-assigned loans
-void loan_view_non_assigned_loans() {}
+//============================================================================
 
 // View employee assigned loans
-void loan_view_and_process_assigned_loans() {}
 
-// Process loan
-void loan_process_loan() {}
+//============================================================================
 
-// Accept loan
-void loan_accept_loan() {}
+typedef struct
+{
+    int userId;
+    int loanStatus;
+} userId_loanStatus;
 
-// Reject loan
-void loan_reject_loan() {}
+static int __find_loans_based_on_userId_loanStatus(void *rec, void *ctx)
+{
+    Loan *tempLoan = (Loan *)rec;
+    userId_loanStatus *temp_userId_loanStatus = (userId_loanStatus *)ctx;
 
-void loan_view_process_non_assigned_loans() {}
+    // return (tempLoan->assignedID == temp_userId_loanStatus->userId &&
+    //         tempLoan->loanStatus == temp_userId_loanStatus->loanStatus)
+    //            ? 1
+    //            : 0;
+    return (tempLoan->assignedID == temp_userId_loanStatus->userId)
+               ? 1
+               : 0;
+}
+
+static void __display_assigned_loans(int fd, int count, Loan *assignedLoans)
+{
+    clear_terminal(fd);
+    send_message(fd, "\n=====================================\n");
+    send_message(fd, "           My Assigned Loans          \n");
+    send_message(fd, "=====================================\n");
+    send_message(fd, "\n\nIndex\t\t\tLoanId\t\t\tAccountId\t\tAmount\t\t\tStatus");
+
+    for (int i = 0; i < count; i++)
+    {
+        int loanId = assignedLoans[i].loanId;
+        int loanAmount = assignedLoans[i].loanAmount;
+        int loanStatusInt = assignedLoans[i].loanStatus;
+        int accountId = assignedLoans[i].accountID;
+
+        char loanStatus[20];
+
+        switch (loanStatusInt)
+        {
+        case LOAN_APPROVED:
+            strcpy(loanStatus, "Approved");
+            break;
+        case LOAN_REJECTED:
+            strcpy(loanStatus, "Rejected");
+            break;
+        case LOAN_PROCESSING:
+            strcpy(loanStatus, "Processing");
+            break;
+        default:
+            strcpy(loanStatus, "INVALID");
+            break;
+        }
+
+        send_message(fd, makeString("\n%d\t\t\t%d\t\t\t%d\t\t\t%d\t\t\t%s",
+                                    i + 1, loanId, accountId, loanAmount, loanStatus));
+    }
+}
+
+static void __display_a_loan(int fd, Loan *assignedLoans, int choice)
+{
+    clear_terminal(fd);
+    send_message(fd, "\n=====================================\n");
+    send_message(fd, makeString("              Loan (ID:%d)          \n", assignedLoans[choice - 1].loanId));
+    send_message(fd, "=====================================\n\n\n");
+
+    send_message(fd, makeString("Loan Id: %d\n\nAccount Id: %d\n\nLoan Amount: %d",
+                                assignedLoans[choice - 1].loanId,
+                                assignedLoans[choice - 1].accountID,
+                                assignedLoans[choice - 1].loanAmount));
+}
+
+// View employee assigned loans
+void loan_view_and_process_assigned_loans()
+{
+    int fd = clientfd;
+    int userId = logged_in_user.userId;
+    char *temp = NULL;
+    void *assignedLoansBits = NULL;
+    Loan *currentLoan = NULL;
+
+    while (1)
+    {
+        // Find Processing Loans assigned to employee
+        userId_loanStatus userId_and_loanStatus;
+        userId_and_loanStatus.userId = userId;
+        userId_and_loanStatus.loanStatus = LOAN_PROCESSING;
+
+        assignedLoansBits = NULL;
+        int count = record__search_cont(&assignedLoansBits, sizeof(Loan), LOAN_DB,
+                                        &__find_loans_based_on_userId_loanStatus,
+                                        &userId_and_loanStatus);
+
+        if (count == -1)
+            goto cleanup;
+
+        Loan *assignedLoans = (Loan *)assignedLoansBits;
+
+        // Display loans to user
+        __display_assigned_loans(fd, count, assignedLoans);
+
+        // Get index to display details of a particular loan
+        int choice;
+
+        while (1)
+        {
+            if (prompt_user_input(fd, "\nEnter index number of the loan to review (-1 to go back): ", &temp) != 0)
+            {
+                goto cleanup;
+            }
+
+            choice = atoi(temp);
+
+            if (choice < 1 || choice > count)
+            {
+                send_message(fd, "\nInvalid selection.\n");
+                continue;
+            }
+
+            break;
+        }
+
+        // display a particular loan
+        __display_a_loan(fd, assignedLoans, choice);
+
+        // Aprrove, Reject or go back to view assigned loans
+        currentLoan = &assignedLoans[choice - 1];
+
+        while (1)
+        {
+            if (prompt_user_input(fd, "\nEnter(-1 to go back) -\n\t1 - Approve\n\t2 - Reject\n: ", &temp) != 0)
+            {
+                currentLoan = NULL;
+                break;
+            }
+
+            int choice = atoi(temp);
+
+            if (choice == 1)
+                currentLoan->loanStatus = LOAN_APPROVED;
+            else if (choice == 2)
+                currentLoan->loanStatus = LOAN_REJECTED;
+            else
+            {
+                send_message(fd, "\nInvalid choice. Try again...\n");
+                continue;
+            }
+
+            break;
+        }
+
+        // Go back to view assigned loans
+        if (currentLoan == NULL)
+        {
+            continue;
+        }
+
+        // process and save the loan
+
+        if (record__save(currentLoan, sizeof(Loan), LOAN_DB) == -1)
+        {
+            send_message(fd, "\nUnable to process the loan\n");
+        }
+        else
+        {
+            send_message(fd, "\nLoan processed successfully");
+        }
+
+        waitTillEnter(fd);
+    }
+
+cleanup:
+    free(assignedLoansBits);
+    free(temp);
+    free(currentLoan);
+    return showStartScreen();
+}
+
+//============================================================================
+
+// View and Assign non-assigned loans
+
+//============================================================================
+
+static int __find_loan_based_on_loanId(void *rec, void *ctx)
+{
+    Loan *tempLoan = (Loan *)rec;
+    int loanId = *(int *)ctx;
+
+    return tempLoan->loanId == loanId ? 1 : 0;
+}
+
+static int __find_non_assigned_loans(void *rec, void *ctx)
+{
+    Loan *tempLoan = (Loan *)rec;
+    int non_assigned_loan = *(int *)ctx;
+
+    return tempLoan->assignedID == non_assigned_loan ? 1 : 0;
+}
+
+static void __display_non_assigned_loans(int fd, int count, Loan *loans)
+{
+    clear_terminal(fd);
+    send_message(fd, "\n=====================================\n");
+    send_message(fd, "          Non Assigned Loans         \n");
+    send_message(fd, "=====================================\n");
+    send_message(fd, "\n\nIndex\t\t\tLoanId\t\t\tAmount");
+
+    for (int i = 0; i < count; i++)
+    {
+        int loanId = loans[i].loanId;
+        int loanAmount = loans[i].loanAmount;
+
+        send_message(fd, makeString("\n%d\t\t\t%d\t\t\t%d", i + 1, loanId, loanAmount));
+    }
+}
+
+// View and Assign non-assigned loans
+void loan_view_non_assigned_loans_and_assign()
+{
+    int fd = clientfd;
+    int non_assigned_loan = LOAN_NOTASSIGNED;
+    char *temp = NULL;
+
+    void *loansBits = NULL;
+
+    while (1)
+    {
+        int count = record__search_cont(&loansBits, sizeof(Loan), LOAN_DB, &__find_non_assigned_loans, &non_assigned_loan);
+
+        if (count == -1)
+            goto cleanup;
+
+        Loan *loans = (Loan *)loansBits;
+        __display_non_assigned_loans(fd, count, loans);
+
+        // Get index to display details of a particular loan
+        int loanId;
+        int userId;
+        int choice;
+
+        while (1)
+        {
+            if (prompt_user_input(fd, "\nEnter index number of the loan to assign (-1 to cancel): ", &temp) != 0)
+            {
+                goto cleanup;
+            }
+
+            choice = atoi(temp);
+
+            if (choice < 1 || choice > count)
+            {
+                send_message(fd, "\nInvalid selection.\n");
+                continue;
+            }
+
+            break;
+        }
+
+        loanId = loans[choice - 1].loanId;
+
+        // get user id
+        while (1)
+        {
+            if (prompt_user_input(fd, "\nEnter userId of the employee to assign loan to (-1 to cancel): ", &temp) != 0)
+                goto cleanup;
+
+            choice = atoi(temp);
+            userId = choice;
+
+            User tempUser;
+
+            // check if userid belongs to employee
+            int pos = find_user_based_on_userId(&tempUser, userId);
+
+            if (pos == -1 || tempUser.role != EMPLOYEE_ROLE)
+            {
+                send_message(fd, "\nInvalid userId\n");
+                continue;
+            }
+            break;
+        }
+
+        // find loan and update it
+        Loan tempLoan;
+        int pos = record__search(&tempLoan, sizeof(Loan), LOAN_DB, &__find_loan_based_on_loanId, &loanId);
+        tempLoan.assignedID = userId;
+
+        if (pos == -1 || record__update(&tempLoan, sizeof(Loan), LOAN_DB, pos))
+            send_message(fd, "\nUnable to assign the loan\n");
+        else
+            send_message(fd, "\nLoan Assigned successfully");
+    }
+
+cleanup:
+    free(loansBits);
+    free(temp);
+    return showStartScreen();
+}

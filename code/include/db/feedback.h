@@ -1,3 +1,11 @@
+// feedback.h
+
+//============================================================================
+
+// This file contains logic and UI related to feedbacks
+
+//============================================================================
+
 #ifndef Feedback_H
 #define Feedback_H
 
@@ -34,6 +42,8 @@ void feedback_view_user_feedback();
 
 // view all feedbacks
 void feedback_view_all_feedback();
+
+void feedback_reviewCreate_action();
 
 // view non review feedback
 void feedback_view_non_reviewed_feedback();

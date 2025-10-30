@@ -1,10 +1,20 @@
+// account.h
+
+//============================================================================
+
+// This file contains logic and UI related to accounts
+
+//============================================================================
+
 #ifndef Account_H
 #define Account_H
 
 // =======================================
 // Account Record Structure
 // =======================================
-typedef struct {
+
+typedef struct
+{
     int accountId;
     int accountBalance;
 } Account;

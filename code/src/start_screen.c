@@ -92,7 +92,7 @@ void admin_start_screen()
         default:
             free(response);
             send_message(fd, "\n Invalid choice... Try again\n\n");
-            sleep(2);
+            sleep(1);
         }
     }
 }
@@ -137,14 +137,14 @@ void manager_start_screen()
             return user_deactivate_user();
         case '3':
             free(response);
-            return loan_view_process_non_assigned_loans();
+            return loan_view_non_assigned_loans_and_assign();
         case '4':
             free(response);
-            return;
+            return feedback_reviewCreate_action();
         default:
             free(response);
             send_message(fd, "\n Invalid choice... Try again\n\n");
-            sleep(2);
+            sleep(1);
         }
     }
 }
@@ -196,7 +196,7 @@ void employee_start_screen()
         default:
             free(response);
             send_message(fd, "\n Invalid choice... Try again\n\n");
-            sleep(2);
+            sleep(1);
         }
     }
 }
@@ -224,6 +224,7 @@ void customer_start_screen()
         send_message(fd, "7. Write a feedback\n");
         send_message(fd, "8. View feedback status\n");
         send_message(fd, "9. View transaction history\n");
+        send_message(fd, "10. Change Password\n");
         send_message(fd, "0. Exit\n\n");
         send_message(fd, "Choose your option: ");
 
@@ -233,42 +234,47 @@ void customer_start_screen()
             return server_error();
         }
 
-        switch (response[0])
+        int choice = atoi(response);
+
+        switch (choice)
         {
-        case '0':
+        case 0:
             free(response);
             return user_logout();
-        case '1':
+        case 1:
             free(response);
             return account_view_balance();
-        case '2':
+        case 2:
             free(response);
             return account_deposit();
-        case '3':
+        case 3:
             free(response);
             return account_withdraw();
-        case '4':
+        case 4:
             free(response);
             return account_transfer_funds();
-        case '5':
+        case 5:
             free(response);
             return loan_create_loan();
-        case '6':
+        case 6:
             free(response);
             return loan_view_loan_status();
-        case '7':
+        case 7:
             free(response);
             return feedback_create_feedback();
-        case '8':
+        case 8:
             free(response);
             return feedback_view_user_feedback();
-        case '9':
+        case 9:
             free(response);
             return transaction_view_transactions(1);
+        case 10:
+            free(response);
+            return user_change_password();
         default:
             free(response);
             send_message(fd, "\n Invalid choice... Try again\n\n");
-            sleep(2);
+            sleep(1);
         }
     }
 }

@@ -40,6 +40,8 @@
                     7. View transaction history (Transaction) 🟢
                         1. Search for transactions in transaction using userId
 
+                    8. Change Password
+
             2. Employee Flow
 
                 1. Login as a employee (User)
@@ -52,7 +54,7 @@
                     2. Modify customer details (User) 🟢
                         1. Update only name, age and address in user table for user with role "customer"
 
-                    3. View and prcoess loans (Approve/Reject loans) (Loan)
+                    3. View and prcoess loans (Approve/Reject loans) (Loan) 🟢
                         1. Mark assigned loans as approved or rejected
                         2. If account deactivated - return "Failed. User Account is deactivated"
 
@@ -69,12 +71,12 @@
                             1. Filter account on the basis on accountId
                             2. Set active = false/true
 
-                        2. View non_assigned loans (Loan)
+                        2. View non_assigned loans (Loan) 🟢
 
-                        3. Assign loan application to empyloyees (Loan)
+                        3. Assign loan application to empyloyees (Loan) 🟢
                             1. changed assignedTo to employeeId (userId)
 
-                        4. Review Customer Feedback (feedback) 🔴
+                        4. Review Customer Feedback (feedback) 🟢
                             1. add action string and change reviewStatus to true
 
             4. Admin Flow

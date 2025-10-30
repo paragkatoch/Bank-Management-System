@@ -18,5 +18,7 @@ int generateUniqueUserId();
 int generateUniqueLoanId();
 int generateUniqueFeedbackId();
 int generateUniqueTransactionId();
+void waitTillEnter(int fd);
+int prompt_user_input(int fd, const char *message, char **out);
 
 #endif

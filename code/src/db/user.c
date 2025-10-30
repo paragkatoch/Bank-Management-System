@@ -52,18 +52,18 @@ typedef struct
 {
     char username[20];
     char password[20];
-} __ul_user;
+} username_password;
 // function to update session of User
-static void __ul_update_session(void *rec)
+static void __update_user_session(void *rec)
 {
     User *user = (User *)rec;
     user->session_active = 1;
 }
 // function to compare user with username, password and session
-static int __ul_cmp_user(void *rec, void *ctx)
+static int __compare_user_username_password(void *rec, void *ctx)
 {
     User *user = (User *)rec;
-    __ul_user *login = (__ul_user *)ctx;
+    username_password *login = (username_password *)ctx;
 
     if ((strcmp(user->username, login->username) == 0) &&
         (strcmp(user->password, login->password) == 0) &&
@@ -75,15 +75,15 @@ static int __ul_cmp_user(void *rec, void *ctx)
     return 0; // no match
 }
 // function to find user on the basis of username and password
-static int __ul_find_user(char *username, char *password)
+static int __find_user_based_on_username_password(char *username, char *password)
 {
     User tempUser;
-    __ul_user ul_user;
+    username_password usernamePassword;
 
-    safe_strncpy(ul_user.username, username, sizeof(ul_user.username) - 1);
-    safe_strncpy(ul_user.password, password, sizeof(ul_user.password) - 1);
+    safe_strncpy(usernamePassword.username, username, sizeof(usernamePassword.username) - 1);
+    safe_strncpy(usernamePassword.password, password, sizeof(usernamePassword.password) - 1);
 
-    int index = record__search_and_update(&tempUser, sizeof(tempUser), USER_DB, &__ul_cmp_user, &ul_user, &__ul_update_session);
+    int index = record__search_and_update(&tempUser, sizeof(tempUser), USER_DB, &__compare_user_username_password, &usernamePassword, &__update_user_session);
 
     if (index == -1)
     {
@@ -102,7 +102,6 @@ void user_login()
 {
     int fd = clientfd;
     int attempts = 3;
-    const char *err_msg = NULL;
 
     char *username = NULL;
     char *password = NULL;
@@ -115,27 +114,13 @@ void user_login()
         send_message(fd, "         Welcome to Login Portal     ");
         send_message(fd, "=====================================\n");
 
-        // --- Username ---
-        send_message(fd, "\nEnter username (-1 to exit): ");
-        if (receive_message(fd, &username) < 0)
+        if (prompt_user_input(fd, "\nEnter username (-1 to exit): ", &username) != 0 ||
+            prompt_user_input(fd, "\nEnter password (-1 to exit): ", &password) != 0)
         {
-            err_msg = "Internal server error";
             goto cleanup;
         }
-        else if (strcmp(username, "-1") == 0)
-            goto cleanup;
 
-        // --- Password ---
-        send_message(fd, "\nEnter password (-1 to exit): ");
-        if (receive_message(fd, &password) < 0)
-        {
-            err_msg = "Internal server error";
-            goto cleanup;
-        }
-        else if (strcmp(password, "-1") == 0)
-            goto cleanup;
-
-        int login_successful = __ul_find_user(username, password);
+        int login_successful = __find_user_based_on_username_password(username, password);
 
         if (login_successful)
         {
@@ -156,19 +141,12 @@ void user_login()
         else
         {
             attempts--;
-            char msg[128];
-            snprintf(msg, sizeof(msg), "\nLogin failed!. Attempts left: %d", attempts);
-            send_message(fd, msg);
+            send_message(fd, makeString("\nLogin failed!. Attempts left: %d", attempts));
             sleep(2);
         }
     }
 
 cleanup:
-    if (err_msg)
-    {
-        send_message(fd, err_msg);
-        sleep(2);
-    }
     free(username);
     free(password);
     return;
@@ -184,27 +162,6 @@ success:
 // Create new employee
 
 //============================================================================
-
-// Create and save new user
-static int __uce_prompt_user_input(int fd, const char *message, char **out)
-{
-    send_message(fd, message);
-    if (receive_message(fd, out) < 0)
-    {
-        send_message(fd, "\nError receiving input.\n");
-        sleep(2);
-        return -2;
-    }
-
-    if (strcmp(*out, "-1") == 0)
-    {
-        send_message(fd, "\nOperation cancelled by user.\n");
-        sleep(2);
-        return -1;
-    }
-
-    return 0;
-}
 
 // Create new employee
 void user_create_employee()
@@ -232,12 +189,12 @@ void user_create_employee()
     send_message(fd, "\n Use -1 to cancel \n\n");
 
     // get updated details
-    if (__uce_prompt_user_input(fd, "\nEnter employee name: ", &name) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter employee age: ", &age) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter employee address: ", &address) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter phone number: ", &phone) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter username: ", &username) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter password: ", &password) != 0)
+    if (prompt_user_input(fd, "\nEnter employee name: ", &name) != 0 ||
+        prompt_user_input(fd, "\nEnter employee age: ", &age) != 0 ||
+        prompt_user_input(fd, "\nEnter employee address: ", &address) != 0 ||
+        prompt_user_input(fd, "\nEnter phone number: ", &phone) != 0 ||
+        prompt_user_input(fd, "\nEnter username: ", &username) != 0 ||
+        prompt_user_input(fd, "\nEnter password: ", &password) != 0)
         goto cleanup;
 
     // create user with new details
@@ -253,8 +210,7 @@ void user_create_employee()
     else
         send_message(fd, "Employee details saved to database.\n");
 
-    send_message(fd, "\n\n\nPress enter to continue...");
-    receive_message(fd, &name);
+    waitTillEnter(fd);
 
     // cleanup
 cleanup:
@@ -299,13 +255,13 @@ void user_create_customer()
     send_message(fd, "\n Use -1 to cancel \n\n");
 
     // get updated details
-    if (__uce_prompt_user_input(fd, "\nEnter Customer name: ", &name) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter Customer age: ", &age) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter Customer address: ", &address) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter phone number: ", &phone) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter username: ", &username) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter password: ", &password) != 0 ||
-        __uce_prompt_user_input(fd, "\nEnter Account Balance: ", &principalBalance) != 0)
+    if (prompt_user_input(fd, "\nEnter Customer name: ", &name) != 0 ||
+        prompt_user_input(fd, "\nEnter Customer age: ", &age) != 0 ||
+        prompt_user_input(fd, "\nEnter Customer address: ", &address) != 0 ||
+        prompt_user_input(fd, "\nEnter phone number: ", &phone) != 0 ||
+        prompt_user_input(fd, "\nEnter username: ", &username) != 0 ||
+        prompt_user_input(fd, "\nEnter password: ", &password) != 0 ||
+        prompt_user_input(fd, "\nEnter Account Balance: ", &principalBalance) != 0)
         goto cleanup;
 
     // create user with new details
@@ -324,8 +280,7 @@ void user_create_customer()
     else
         send_message(fd, "Customer details saved to database.\n");
 
-    send_message(fd, "\n\n\nPress enter to continue...");
-    receive_message(fd, &name);
+    waitTillEnter(fd);
 
     // cleanup
 cleanup:
@@ -345,7 +300,7 @@ cleanup:
 //============================================================================
 
 // user login compare function for searching user record
-static int __ucud_cmp_username(void *rec, void *ctx)
+static int __compare_user_username(void *rec, void *ctx)
 {
     User *user = (User *)rec;
     // __user_login_username *login = (__user_login_username *)ctx;
@@ -358,13 +313,13 @@ static int __ucud_cmp_username(void *rec, void *ctx)
     return 0; // no match
 }
 // find user record based only on username
-static int __ucud_find_user_with_username(char *username, User *tempUser)
+static int __find_user_based_on_username(char *username, User *tempUser)
 {
-    int index = record__search(tempUser, sizeof(User), USER_DB, __ucud_cmp_username, username);
+    int index = record__search(tempUser, sizeof(User), USER_DB, __compare_user_username, username);
     return index;
 }
 // prompt user input
-static int __ucud_prompt_user_input_update(int fd, const char *message, char **out, char *original)
+static int __prompt_user_input_update(int fd, const char *message, char **out, char *original)
 {
     send_message(fd, message);
 
@@ -404,21 +359,21 @@ void user_change_user_details(int customerOnly)
     send_message(fd, "=====================================\n");
 
     // Get username to update
-    if (__uce_prompt_user_input(fd, "\nEnter username to update details for: ", &username) != 0)
+    if (prompt_user_input(fd, "\nEnter username to update details for: ", &username) != 0)
         goto cleanup;
 
-    int index = __ucud_find_user_with_username(username, &user);
+    int index = __find_user_based_on_username(username, &user);
     if (index == -1)
     {
         send_message(fd, "\nUser not found.\n");
-        sleep(2);
+        waitTillEnter(fd);
         goto cleanup;
     }
 
     if (customerOnly == 1 && user.role != CUSTOMER_ROLE)
     {
         send_message(fd, "\nEnter valid customer username");
-        sleep(2);
+        waitTillEnter(fd);
         goto cleanup;
     }
 
@@ -428,42 +383,42 @@ void user_change_user_details(int customerOnly)
     // Name
     send_message(fd, "\nCurrent name is: ");
     send_message(fd, user.name);
-    if (__ucud_prompt_user_input_update(fd, "\nEnter new name: ", &name, user.name) == -1)
+    if (__prompt_user_input_update(fd, "\nEnter new name: ", &name, user.name) == -1)
         goto cleanup;
 
     // Age
     clear_terminal(fd);
     send_message(fd, "\nCurrent age is: ");
     send_message(fd, user.age);
-    if (__ucud_prompt_user_input_update(fd, "\nEnter new age: ", &age, user.age) == -1)
+    if (__prompt_user_input_update(fd, "\nEnter new age: ", &age, user.age) == -1)
         goto cleanup;
 
     // Address
     clear_terminal(fd);
     send_message(fd, "\nCurrent Address is: ");
     send_message(fd, user.address);
-    if (__ucud_prompt_user_input_update(fd, "\nEnter new address: ", &address, user.address) == -1)
+    if (__prompt_user_input_update(fd, "\nEnter new address: ", &address, user.address) == -1)
         goto cleanup;
 
     // Phone
     clear_terminal(fd);
     send_message(fd, "\nCurrent phone number is: ");
     send_message(fd, user.phone);
-    if (__ucud_prompt_user_input_update(fd, "\nEnter new phone number: ", &phone, user.phone) == -1)
+    if (__prompt_user_input_update(fd, "\nEnter new phone number: ", &phone, user.phone) == -1)
         goto cleanup;
 
     // Username
     clear_terminal(fd);
     send_message(fd, "\nCurrent username is: ");
     send_message(fd, user.username);
-    if (__ucud_prompt_user_input_update(fd, "\nEnter new username: ", &username, user.username) == -1)
+    if (__prompt_user_input_update(fd, "\nEnter new username: ", &username, user.username) == -1)
         goto cleanup;
 
     // Password
     clear_terminal(fd);
     send_message(fd, "\nCurrent password is: ");
     send_message(fd, user.password);
-    if (__ucud_prompt_user_input_update(fd, "\nEnter new password: ", &password, user.password) == -1)
+    if (__prompt_user_input_update(fd, "\nEnter new password: ", &password, user.password) == -1)
         goto cleanup;
 
     // create user with new details
@@ -477,8 +432,7 @@ void user_change_user_details(int customerOnly)
     else
         send_message(fd, "\nError updating user details in database.\n");
 
-    send_message(fd, "\n\n\nPress enter to continue...");
-    receive_message(fd, &name);
+    waitTillEnter(fd);
 
 cleanup:
     free(name);
@@ -506,7 +460,36 @@ void user_view_user_details() {}
 //============================================================================
 
 // UI - Change Password
-void user_change_password() {}
+void user_change_password()
+{
+    int fd = clientfd;
+    User *user = &logged_in_user;
+    char *password = NULL;
+
+    clear_terminal(fd);
+    send_message(fd, "=====================================\n");
+    send_message(fd, "            Update Password          \n");
+    send_message(fd, "=====================================\n");
+
+    // Password
+    clear_terminal(fd);
+    send_message(fd, makeString("\nCurrent password is: %s", user->password));
+    if (prompt_user_input(fd, "\nEnter new password: ", &password) == -1)
+        goto cleanup;
+
+    safe_strncpy(user->password, password, 20);
+
+    if (record__update(user, sizeof(User), USER_DB, logged_in_user_index) != 0)
+        send_message(fd, "\nUnable to save new password details in database.\n");
+    else
+        send_message(fd, "\nNew password details saved to database.\n");
+
+    waitTillEnter(fd);
+
+cleanup:
+    free(password);
+    return showStartScreen();
+}
 
 //============================================================================
 
@@ -515,11 +498,16 @@ void user_change_password() {}
 //============================================================================
 
 // compare by userId
-static int __uacu_cmp_userid(void *rec, void *ctx)
+static int __compare_user_userId(void *rec, void *ctx)
 {
     User *user = (User *)rec;
     int *id = (int *)ctx;
     return user->userId == *id;
+}
+
+int find_user_based_on_userId(User *user, int userId)
+{
+    return record__search(user, sizeof(User), USER_DB, __compare_user_userId, &userId);
 }
 
 // UI - Activate user
@@ -536,16 +524,16 @@ void user_activate_user()
     send_message(fd, "=====================================\n");
 
     // Get userId input
-    if (__uce_prompt_user_input(fd, "\nEnter User ID to activate (-1 to cancel): ", &userId_str) != 0)
+    if (prompt_user_input(fd, "\nEnter User ID to activate (-1 to cancel): ", &userId_str) != 0)
         goto cleanup;
 
     int userId = atoi(userId_str);
-    int index = record__search(&user, sizeof(User), USER_DB, __uacu_cmp_userid, &userId);
+    int index = find_user_based_on_userId(&user, userId);
 
     if (index == -1)
     {
         send_message(fd, "\nUser not found.\n");
-        sleep(2);
+        waitTillEnter(fd);
         goto cleanup;
     }
 
@@ -553,7 +541,7 @@ void user_activate_user()
     if (user.account_active == 1)
     {
         send_message(fd, "\nThis user account is already active.\n");
-        sleep(2);
+        waitTillEnter(fd);
         goto cleanup;
     }
 
@@ -564,8 +552,7 @@ void user_activate_user()
     else
         send_message(fd, "\nError activating user account.\n");
 
-    send_message(fd, "\n\n\nPress enter to continue...");
-    receive_message(fd, &userId_str);
+    waitTillEnter(fd);
 
 cleanup:
     free(userId_str);
@@ -592,16 +579,16 @@ void user_deactivate_user()
     send_message(fd, "=====================================\n");
 
     // Get userId input
-    if (__uce_prompt_user_input(fd, "\nEnter User ID to deactivate (-1 to cancel): ", &userId_str) != 0)
+    if (prompt_user_input(fd, "\nEnter User ID to deactivate (-1 to cancel): ", &userId_str) != 0)
         goto cleanup;
 
     int userId = atoi(userId_str);
-    int index = record__search(&user, sizeof(User), USER_DB, __uacu_cmp_userid, &userId);
+    int index = record__search(&user, sizeof(User), USER_DB, __compare_user_userId, &userId);
 
     if (index == -1)
     {
         send_message(fd, "\nUser not found.\n");
-        sleep(2);
+        waitTillEnter(fd);
         goto cleanup;
     }
 
@@ -609,7 +596,7 @@ void user_deactivate_user()
     if (user.account_active == 0)
     {
         send_message(fd, "\nThis user account is already deactivated.\n");
-        sleep(2);
+        waitTillEnter(fd);
         goto cleanup;
     }
 
@@ -620,8 +607,7 @@ void user_deactivate_user()
     else
         send_message(fd, "\nError deactivating user account.\n");
 
-    send_message(fd, "\n\n\nPress enter to continue...");
-    receive_message(fd, &userId_str);
+    waitTillEnter(fd);
 
 cleanup:
     free(userId_str);
@@ -633,20 +619,6 @@ cleanup:
 // Change user role
 
 //============================================================================
-
-// prompt user input
-static int __ucur_prompt_user_input_update(int fd, const char *message, char **out)
-{
-    send_message(fd, message);
-
-    if (receive_message(fd, out) < 0)
-        return -1; // communication error
-
-    if (strcmp(*out, "-1") == 0)
-        return -1; // cancel update
-
-    return 1;
-}
 
 // UI - Change user role
 void user_change_user_role()
@@ -663,14 +635,14 @@ void user_change_user_role()
     send_message(fd, "=====================================\n");
 
     // Get username to update
-    if (__uce_prompt_user_input(fd, "Enter username to update details for (-1 to cancel): ", &username) != 0)
+    if (prompt_user_input(fd, "Enter username to update details for (-1 to cancel): ", &username) != 0)
         goto cleanup;
 
-    int index = __ucud_find_user_with_username(username, &user);
+    int index = __find_user_based_on_username(username, &user);
     if (index == -1)
     {
         send_message(fd, "User not found.\n");
-        sleep(2);
+        waitTillEnter(fd);
         goto cleanup;
     }
 
@@ -679,11 +651,9 @@ void user_change_user_role()
     send_message(fd, "1- Admin\n2- Employee\n3- Manager\n");
 
     // ROLE
-    char buf[100];
-    snprintf(buf, sizeof(buf), "Current role is: %d", user.role);
-    send_message(fd, buf);
+    send_message(fd, makeString("Current role is: %d", user.role));
 
-    int res = __ucur_prompt_user_input_update(fd, "\nEnter your choice: ", &role);
+    int res = prompt_user_input(fd, "\nEnter your choice: ", &role);
     if (res == -1)
         goto cleanup;
     if (res == 1)
@@ -696,8 +666,7 @@ void user_change_user_role()
     else
         send_message(fd, "\nError updating role in database.\n");
 
-    send_message(fd, "\n\n\nPress enter to continue...");
-    receive_message(fd, &username);
+    waitTillEnter(fd);
 
 cleanup:
     free(username);
