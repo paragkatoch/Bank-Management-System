@@ -18,6 +18,7 @@
 #include "start_screen.h"
 #include "db/account.h"
 #include <unistd.h>
+#include <fcntl.h>
 
 static void __display_loans(int fd, int count, Loan *loansBits, char *header)
 {
@@ -278,6 +279,37 @@ void loan_view_and_process_assigned_loans()
         if (currentLoan == NULL)
         {
             continue;
+        }
+
+        if (currentLoan->loanStatus == LOAN_APPROVED)
+        {
+            int index;
+            int lock_fd;
+            Account account;
+
+            if ((index = __find_Account_From_AccountId(fd, currentLoan->accountID, &account, RECORD_USE_LOCK)) == -1)
+                goto cleanup;
+
+            // lock record
+            ssize_t size = sizeof(Account);
+            lock_fd = lock_record_fd(ACCOUNT_DB, F_WRLCK, index * size, size);
+            if (lock_fd == -1)
+                goto cleanup;
+
+            __find_Account_From_AccountId(fd, currentLoan->accountID, &account, RECORD_NOT_USE_LOCK);
+            int oldBalance = account.accountBalance;
+            account.accountBalance += currentLoan->loanAmount;
+
+            // Save updated account back to database and Record the deposit transaction
+            if (record__update(&account, size, ACCOUNT_DB, index, RECORD_NOT_USE_LOCK) == -1 ||
+                transaction_save_transaction(-1, currentLoan->accountID, oldBalance, currentLoan->loanAmount, account.accountBalance) == -1)
+            {
+                send_message(fd, "\nUnable to process the loan");
+                waitTillEnter(fd);
+                goto cleanup;
+            }
+
+            (lock_fd != -1) && unlock_record(lock_fd, index * size, size);
         }
 
         int loanId = currentLoan->loanId;

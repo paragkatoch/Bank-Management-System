@@ -137,7 +137,7 @@ void account_deposit()
 
     // Save updated account back to database and Record the deposit transaction
     if (record__update(&account, size, ACCOUNT_DB, index, RECORD_NOT_USE_LOCK) == -1 ||
-        transaction_save_transaction(accountId, -1, oldBalance, depositAmount, account.accountBalance) == -1)
+        transaction_save_transaction(-1, accountId, oldBalance, depositAmount, account.accountBalance) == -1)
     {
         send_message(fd, "\nUnable to process transaction");
         waitTillEnter(fd);
