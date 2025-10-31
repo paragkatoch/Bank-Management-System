@@ -50,20 +50,40 @@ void server_error()
     user_logout();
 }
 
+// char *makeString(const char *fmt, ...)
+// {
+//     static char buffer[1000]; // or malloc for dynamic
+//     va_list args;
+//     va_start(args, fmt);
+//     vsnprintf(buffer, sizeof(buffer), fmt, args);
+//     va_end(args);
+//     return buffer;
+// }
+
 char *makeString(const char *fmt, ...)
 {
-    static char buffer[1000]; // or malloc for dynamic
     va_list args;
     va_start(args, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
+
+    // get required size
+    int size = vsnprintf(NULL, 0, fmt, args) + 1;
     va_end(args);
-    return buffer;
+
+    char *buffer = malloc(size);
+    if (!buffer)
+        return NULL;
+
+    va_start(args, fmt);
+    vsnprintf(buffer, size, fmt, args);
+    va_end(args);
+
+    return buffer; // caller must free()
 }
 
 int generateUniqueUserId()
 {
     User tempUser;
-    if (record_end_record(&tempUser, sizeof(User), USER_DB) == -1)
+    if (record_end_record(&tempUser, sizeof(User), USER_DB, RECORD_USE_LOCK) == -1)
         return 1;
 
     int maxId = tempUser.userId;
@@ -73,7 +93,7 @@ int generateUniqueUserId()
 int generateUniqueLoanId()
 {
     Loan tempLoan;
-    if (record_end_record(&tempLoan, sizeof(Loan), LOAN_DB) == -1)
+    if (record_end_record(&tempLoan, sizeof(Loan), LOAN_DB, RECORD_USE_LOCK) == -1)
         return 1;
 
     int maxId = tempLoan.loanId;
@@ -83,7 +103,7 @@ int generateUniqueLoanId()
 int generateUniqueFeedbackId()
 {
     Feedback tempFeedback;
-    if (record_end_record(&tempFeedback, sizeof(Feedback), FEEDBACK_DB) == -1)
+    if (record_end_record(&tempFeedback, sizeof(Feedback), FEEDBACK_DB, RECORD_USE_LOCK) == -1)
         return 1;
 
     int maxId = tempFeedback.feedbackId;
@@ -93,7 +113,7 @@ int generateUniqueFeedbackId()
 int generateUniqueTransactionId()
 {
     Transaction tempTransaction;
-    if (record_end_record(&tempTransaction, sizeof(Transaction), TRANSACTION_DB) == -1)
+    if (record_end_record(&tempTransaction, sizeof(Transaction), TRANSACTION_DB, RECORD_USE_LOCK) == -1)
         return 1;
 
     int maxId = tempTransaction.transactionId;

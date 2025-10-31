@@ -61,6 +61,6 @@ void user_logout();
 void user_logout_everyone();
 void init_user(User *user, int userId, int role, int s_a, int a_a, char *name, char *age, char *address, char *phone, char *username, char *password);
 
-int find_user_based_on_userId(User *user, int userId);
+int find_user_based_on_userId(User *user, int userId, int lock);
 
 #endif

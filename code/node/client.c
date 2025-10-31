@@ -32,7 +32,7 @@ void client_run(int sock_fd)
     char *recv_buf = NULL;
     char send_buf[1024];
 
-    printf("🟢 Connected to server! Type messages (or 'exit' to quit)\n");
+    printf("Connected to server! Type messages (or 'exit' to quit)\n");
 
     while (1)
     {
@@ -49,13 +49,13 @@ void client_run(int sock_fd)
             // if server closed the connection
             if (fds[0].revents & (POLLHUP | POLLERR))
             {
-                printf("❌ Server closed connection.\n");
+                printf("Server closed connection.\n");
                 break;
             }
 
             if (receive_message(sock_fd, &recv_buf) < 0)
             {
-                printf("❌ Server disconnected.\n");
+                printf("Server disconnected.\n");
                 break;
             }
             printf("%s\n", recv_buf);
@@ -114,7 +114,7 @@ int main(void)
         exit(1);
     }
 
-    printf("✅ Connected to server %s:%d\n", IP, PORT);
+    printf("Connected to server %s:%d\n", IP, PORT);
     client_run(sock_fd);
 
     return 0;

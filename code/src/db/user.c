@@ -83,7 +83,7 @@ static int __find_user_based_on_username_password(char *username, char *password
     safe_strncpy(usernamePassword.username, username, sizeof(usernamePassword.username) - 1);
     safe_strncpy(usernamePassword.password, password, sizeof(usernamePassword.password) - 1);
 
-    int index = record__search_and_update(&tempUser, sizeof(tempUser), USER_DB, &__compare_user_username_password, &usernamePassword, &__update_user_session);
+    int index = record__search_and_update(&tempUser, sizeof(tempUser), USER_DB, &__compare_user_username_password, &usernamePassword, &__update_user_session, RECORD_USE_LOCK);
 
     if (index == -1)
     {
@@ -132,7 +132,6 @@ void user_login()
             for (int i = 0; i < 3; i++)
             {
                 send_message(fd, ".");
-                fflush(stdout);
                 sleep(1);
             }
 
@@ -205,7 +204,7 @@ void user_create_employee()
     send_message(fd, "\nEmployee account created successfully!\n");
 
     // save user to db
-    if (record__save(&user, sizeof(User), USER_DB) != 0)
+    if (record__save(&user, sizeof(User), USER_DB, RECORD_USE_LOCK) != 0)
         send_message(fd, "Unable to save employee details in database.\n");
     else
         send_message(fd, "Employee details saved to database.\n");
@@ -275,7 +274,7 @@ void user_create_customer()
     send_message(fd, "\nCustomer account created successfully!\n");
 
     // save user to db
-    if (record__save(&user, sizeof(User), USER_DB) != 0)
+    if (record__save(&user, sizeof(User), USER_DB, RECORD_USE_LOCK) != 0)
         send_message(fd, "Unable to save Customer details in database.\n");
     else
         send_message(fd, "Customer details saved to database.\n");
@@ -313,9 +312,9 @@ static int __compare_user_username(void *rec, void *ctx)
     return 0; // no match
 }
 // find user record based only on username
-static int __find_user_based_on_username(char *username, User *tempUser)
+static int __find_user_based_on_username(char *username, User *tempUser, int lock)
 {
-    int index = record__search(tempUser, sizeof(User), USER_DB, __compare_user_username, username);
+    int index = record__search(tempUser, sizeof(User), USER_DB, __compare_user_username, username, lock);
     return index;
 }
 // prompt user input
@@ -362,7 +361,7 @@ void user_change_user_details(int customerOnly)
     if (prompt_user_input(fd, "\nEnter username to update details for: ", &username) != 0)
         goto cleanup;
 
-    int index = __find_user_based_on_username(username, &user);
+    int index = __find_user_based_on_username(username, &user, RECORD_USE_LOCK);
     if (index == -1)
     {
         send_message(fd, "\nUser not found.\n");
@@ -427,7 +426,7 @@ void user_change_user_details(int customerOnly)
 
     // Save updated record to the database
     clear_terminal(fd);
-    if (record__update(&user, sizeof(User), USER_DB, index) == 0)
+    if (record__update(&user, sizeof(User), USER_DB, index, RECORD_USE_LOCK) == 0)
         send_message(fd, "\nUser details updated successfully!\n");
     else
         send_message(fd, "\nError updating user details in database.\n");
@@ -479,7 +478,7 @@ void user_change_password()
 
     safe_strncpy(user->password, password, 20);
 
-    if (record__update(user, sizeof(User), USER_DB, logged_in_user_index) != 0)
+    if (record__update(user, sizeof(User), USER_DB, logged_in_user_index, RECORD_USE_LOCK) != 0)
         send_message(fd, "\nUnable to save new password details in database.\n");
     else
         send_message(fd, "\nNew password details saved to database.\n");
@@ -505,9 +504,9 @@ static int __compare_user_userId(void *rec, void *ctx)
     return user->userId == *id;
 }
 
-int find_user_based_on_userId(User *user, int userId)
+int find_user_based_on_userId(User *user, int userId, int lock)
 {
-    return record__search(user, sizeof(User), USER_DB, __compare_user_userId, &userId);
+    return record__search(user, sizeof(User), USER_DB, __compare_user_userId, &userId, lock);
 }
 
 // UI - Activate user
@@ -528,7 +527,7 @@ void user_activate_user()
         goto cleanup;
 
     int userId = atoi(userId_str);
-    int index = find_user_based_on_userId(&user, userId);
+    int index = find_user_based_on_userId(&user, userId, RECORD_USE_LOCK);
 
     if (index == -1)
     {
@@ -537,8 +536,9 @@ void user_activate_user()
         goto cleanup;
     }
 
+    // TODO: new if condition
     // check if already active
-    if (user.account_active == 1)
+    if (user.account_active == 1 || user.role == ADMIN_ROLE)
     {
         send_message(fd, "\nThis user account is already active.\n");
         waitTillEnter(fd);
@@ -547,7 +547,7 @@ void user_activate_user()
 
     user.account_active = 1; // activate user
 
-    if (record__update(&user, sizeof(User), USER_DB, index) == 0)
+    if (record__update(&user, sizeof(User), USER_DB, index, RECORD_USE_LOCK) == 0)
         send_message(fd, "\nUser account activated successfully!\n");
     else
         send_message(fd, "\nError activating user account.\n");
@@ -583,7 +583,7 @@ void user_deactivate_user()
         goto cleanup;
 
     int userId = atoi(userId_str);
-    int index = record__search(&user, sizeof(User), USER_DB, __compare_user_userId, &userId);
+    int index = find_user_based_on_userId(&user, userId, RECORD_USE_LOCK);
 
     if (index == -1)
     {
@@ -593,7 +593,7 @@ void user_deactivate_user()
     }
 
     // check if already inactive
-    if (user.account_active == 0)
+    if (user.account_active == 0 || user.role == ADMIN_ROLE)
     {
         send_message(fd, "\nThis user account is already deactivated.\n");
         waitTillEnter(fd);
@@ -602,7 +602,7 @@ void user_deactivate_user()
 
     user.account_active = 0; // deactivate
 
-    if (record__update(&user, sizeof(User), USER_DB, index) == 0)
+    if (record__update(&user, sizeof(User), USER_DB, index, RECORD_USE_LOCK) == 0)
         send_message(fd, "\nUser account deactivated successfully!\n");
     else
         send_message(fd, "\nError deactivating user account.\n");
@@ -623,7 +623,6 @@ cleanup:
 // UI - Change user role
 void user_change_user_role()
 {
-
     int fd = clientfd;
     User user;
     char *username = NULL;
@@ -638,7 +637,7 @@ void user_change_user_role()
     if (prompt_user_input(fd, "Enter username to update details for (-1 to cancel): ", &username) != 0)
         goto cleanup;
 
-    int index = __find_user_based_on_username(username, &user);
+    int index = __find_user_based_on_username(username, &user, RECORD_USE_LOCK);
     if (index == -1)
     {
         send_message(fd, "User not found.\n");
@@ -656,12 +655,13 @@ void user_change_user_role()
     int res = prompt_user_input(fd, "\nEnter your choice: ", &role);
     if (res == -1)
         goto cleanup;
-    if (res == 1)
+    // TODO res == 0
+    if (res == 0)
         user.role = atoi(role);
 
     clear_terminal(fd);
     // Save updated record to the database
-    if (record__update(&user, sizeof(User), USER_DB, index) == 0)
+    if (record__update(&user, sizeof(User), USER_DB, index, RECORD_USE_LOCK) == 0)
         send_message(fd, "\nUser role updated successfully!\n");
     else
         send_message(fd, "\nError updating role in database.\n");
@@ -684,7 +684,7 @@ cleanup:
 void user_logout()
 {
     logged_in_user.session_active = 0;
-    record__update(&logged_in_user, sizeof(logged_in_user), USER_DB, logged_in_user_index);
+    record__update(&logged_in_user, sizeof(logged_in_user), USER_DB, logged_in_user_index, RECORD_USE_LOCK);
 
     logged_in_user = (User){0};
     logged_in_user_index = -1;
@@ -714,6 +714,6 @@ void user_logout_everyone()
 {
     printf("\nLogging out everyone before starting\n");
     User user;
-    record__search_and_update_cont(&user, sizeof(user), USER_DB, &__ule_true_func, NULL, &__ule_update_session);
+    record__search_and_update_cont(&user, sizeof(user), USER_DB, &__ule_true_func, NULL, &__ule_update_session, RECORD_USE_LOCK);
     return;
 }

@@ -21,7 +21,7 @@ static void __create_admin()
 {
     User user;
     init_user(&user, 1, ADMIN_ROLE, 0, 1, "Admin", "23", "IIITB", "1000110001", "admin", "admin123");
-    record__save(&user, sizeof(user), USER_DB);
+    record__save(&user, sizeof(user), USER_DB, RECORD_USE_LOCK);
 
     printf("User database initialized with default admin account\n");
 }
@@ -38,10 +38,10 @@ static void __create_employees()
     init_user(&employee3, 4, EMPLOYEE_ROLE, 0, 1, "Parag", "23", "IIITB", "1000110001", "parag", "12345");
     init_user(&employee4, 5, MANAGER_ROLE, 0, 1, "Manager", "23", "IIITB", "1000110001", "manager", "manager123");
 
-    record__save(&employee1, sizeof(User), USER_DB);
-    record__save(&employee2, sizeof(User), USER_DB);
-    record__save(&employee3, sizeof(User), USER_DB);
-    record__save(&employee4, sizeof(User), USER_DB);
+    record__save(&employee1, sizeof(User), USER_DB, RECORD_USE_LOCK);
+    record__save(&employee2, sizeof(User), USER_DB, RECORD_USE_LOCK);
+    record__save(&employee3, sizeof(User), USER_DB, RECORD_USE_LOCK);
+    record__save(&employee4, sizeof(User), USER_DB, RECORD_USE_LOCK);
 
     printf("User database initialized with default employee accounts\n");
 }

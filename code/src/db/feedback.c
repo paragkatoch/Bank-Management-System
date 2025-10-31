@@ -43,10 +43,19 @@ static const char *__get_review_status_text(int status)
 
 static void __display_feedbacks(int fd, int count, Feedback *Feedbacks, char *header)
 {
+
     clear_terminal(fd);
     send_message(fd, "\n=====================================\n");
     send_message(fd, makeString("              %s           \n", header));
     send_message(fd, "=====================================\n");
+
+    if (count == 0)
+    {
+        // TODO: update
+        send_message(fd, "\n\n== == == == No feedbacks to display == == == ==\n\n");
+        return;
+    }
+
     send_message(fd, "\n\nIndex\t\t\tFeedbackId\t\tReviewStatus");
 
     for (int i = 0; i < count; i++)
@@ -105,7 +114,7 @@ void feedback_create_feedback()
     send_message(fd, "\nFeedback submitted successfully!\n");
 
     // save user to db
-    if (record__save(&tempFeedback, sizeof(Feedback), FEEDBACK_DB) != 0)
+    if (record__save(&tempFeedback, sizeof(Feedback), FEEDBACK_DB, RECORD_USE_LOCK) != 0)
         send_message(fd, "\nUnable to save feedback details in database.\n");
     else
         send_message(fd, "\nFeedback details saved to database.\n");
@@ -138,7 +147,7 @@ void feedback_view_user_feedback()
     int userId = logged_in_user.userId;
 
     void *feedbackBits = NULL;
-    int count = record__search_cont(&feedbackBits, sizeof(Feedback), FEEDBACK_DB, &__find_feedback_based_on_userId, &userId);
+    int count = record__search_cont(&feedbackBits, sizeof(Feedback), FEEDBACK_DB, &__find_feedback_based_on_userId, &userId, RECORD_USE_LOCK);
 
     if (count == -1)
         goto cleanup;
@@ -214,9 +223,9 @@ static void __feedback_create_action(int feedback_Id, int userId, char *feedback
 
     // save user to db
     Feedback tempFeedback;
-    int pos = record__search(&tempFeedback, sizeof(Feedback), FEEDBACK_DB, &__find_feedback_based_on_feedbackId, &feedback_Id);
+    int pos = record__search(&tempFeedback, sizeof(Feedback), FEEDBACK_DB, &__find_feedback_based_on_feedbackId, &feedback_Id, RECORD_USE_LOCK);
 
-    if (record__update(&updatedFeedback, sizeof(Feedback), FEEDBACK_DB, pos))
+    if (record__update(&updatedFeedback, sizeof(Feedback), FEEDBACK_DB, pos, RECORD_USE_LOCK))
         send_message(fd, "\nUnable to save action details in database.\n");
     else
         send_message(fd, "\nAction details saved to database.\n");
@@ -244,7 +253,7 @@ void feedback_reviewCreate_action()
 
     while (1)
     {
-        int count = record__search_cont(&feedbackBits, sizeof(Feedback), FEEDBACK_DB, &__find_non_reviewed_feedbacks, &not_reviewed);
+        int count = record__search_cont(&feedbackBits, sizeof(Feedback), FEEDBACK_DB, &__find_non_reviewed_feedbacks, &not_reviewed, RECORD_USE_LOCK);
         if (count == -1)
             goto failure;
 

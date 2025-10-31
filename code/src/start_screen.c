@@ -64,7 +64,7 @@ void admin_start_screen()
 
         send_message(fd, "Available options - \n");
         send_message(fd, "1. Create new employee\n");
-        send_message(fd, "2. Modify employee details\n");
+        send_message(fd, "2. Modify customer/employee details\n");
         send_message(fd, "3. Change user role\n");
         send_message(fd, "0. Exit\n\n");
         send_message(fd, "Choose your option: ");

@@ -21,7 +21,7 @@
 // =====================================================
 
 // Lock unlock operation
-int __lock_unlock(int fd, short lock_type, off_t start, size_t len)
+static int __lock_unlock(int fd, short lock_type, off_t start, size_t len)
 {
     struct flock lock;
     memset(&lock, 0, sizeof(lock));
@@ -38,6 +38,19 @@ int lock_file(int fd, short lock_type)
     return __lock_unlock(fd, lock_type, 0, 0);
 }
 
+// Lock whole file
+int lock_file_fd(const char *filename, short lock_type)
+{
+    int fd = open(filename, O_RDWR);
+    if (__lock_unlock(fd, lock_type, 0, 0) == -1)
+    {
+        close(fd);
+        return -1;
+    }
+
+    return fd;
+}
+
 // Unlock whole file
 int unlock_file(int fd)
 {
@@ -48,6 +61,19 @@ int unlock_file(int fd)
 int lock_record(int fd, short lock_type, off_t start, size_t len)
 {
     return __lock_unlock(fd, lock_type, start, len);
+}
+
+// Lock a record
+int lock_record_fd(const char *filename, short lock_type, off_t start, size_t len)
+{
+    int fd = open(filename, O_RDWR);
+    if (__lock_unlock(fd, lock_type, start, len) == -1)
+    {
+        close(fd);
+        return -1;
+    }
+
+    return fd;
 }
 
 // Unlock a record
@@ -63,14 +89,14 @@ int unlock_record(int fd, off_t start, size_t len)
 // =====================================================
 
 // Save record
-int record__save(void *rec, size_t size, const char *filename)
+int record__save(void *rec, size_t size, const char *filename, int lock)
 {
     int fd = open(filename, O_WRONLY | O_CREAT | O_APPEND, 0644);
     if (fd == -1)
         return -1;
 
     // lock entire file
-    if (lock_file(fd, F_WRLCK) == -1)
+    if ((lock == RECORD_USE_LOCK) && lock_file(fd, F_WRLCK) == -1)
     {
         close(fd);
         return -1;
@@ -78,14 +104,14 @@ int record__save(void *rec, size_t size, const char *filename)
 
     ssize_t write_size = write(fd, rec, size);
 
-    unlock_file(fd);
+    (lock == RECORD_USE_LOCK) && unlock_file(fd);
     close(fd);
 
     return (write_size == size) ? 0 : -1;
 }
 
 // Update record at position `pos`
-int record__update(void *rec, size_t size, const char *filename, int pos)
+int record__update(void *rec, size_t size, const char *filename, int pos, int lock)
 {
     int fd = open(filename, O_RDWR);
     if (fd == -1)
@@ -94,7 +120,7 @@ int record__update(void *rec, size_t size, const char *filename, int pos)
     off_t offset = (off_t)pos * size;
 
     // lock record
-    if (lock_record(fd, F_WRLCK, offset, size) == -1)
+    if ((lock == RECORD_USE_LOCK) && lock_record(fd, F_WRLCK, offset, size) == -1)
     {
         close(fd);
         return -1;
@@ -103,20 +129,20 @@ int record__update(void *rec, size_t size, const char *filename, int pos)
     lseek(fd, offset, SEEK_SET);
     ssize_t write_size = write(fd, rec, size);
 
-    unlock_record(fd, offset, size);
+    (lock == RECORD_USE_LOCK) && unlock_record(fd, offset, size);
     close(fd);
 
     return (write_size == size) ? 0 : -1;
 }
 
 // Search record
-int record__search(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx)
+int record__search(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, int lock)
 {
     int fd = open(filename, O_RDONLY);
     if (fd == -1)
         return -1;
 
-    if (lock_file(fd, F_RDLCK) == -1)
+    if ((lock == RECORD_USE_LOCK) && lock_file(fd, F_RDLCK) == -1)
     {
         close(fd);
         return -1;
@@ -136,18 +162,18 @@ int record__search(void *rec, size_t size, const char *filename, int (*cmp)(void
         index++;
     }
 
-    unlock_file(fd);
+    (lock == RECORD_USE_LOCK) && unlock_file(fd);
     close(fd);
     return -1;
 }
 
-int record__search_cont(void **recs, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx)
+int record__search_cont(void **recs, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, int lock)
 {
     int fd = open(filename, O_RDONLY);
     if (fd == -1)
         return -1;
 
-    if (lock_file(fd, F_RDLCK) == -1)
+    if ((lock == RECORD_USE_LOCK) && lock_file(fd, F_RDLCK) == -1)
     {
         close(fd);
         return -1;
@@ -170,7 +196,7 @@ int record__search_cont(void **recs, size_t size, const char *filename, int (*cm
             {
                 free(temp);
                 free(rec);
-                unlock_file(fd);
+                (lock == RECORD_USE_LOCK) && unlock_file(fd);
                 close(fd);
                 return -1;
             }
@@ -184,20 +210,20 @@ int record__search_cont(void **recs, size_t size, const char *filename, int (*cm
         }
     }
 
-    unlock_file(fd);
+    (lock == RECORD_USE_LOCK) && unlock_file(fd);
     close(fd);
     free(rec);
     return index;
 }
 
 // Search and update a record using cmp, ctx and update
-int record__search_and_update(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *))
+int record__search_and_update(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *), int lock)
 {
     int fd = open(filename, O_RDWR);
     if (fd == -1)
         return -1;
 
-    if (lock_file(fd, F_RDLCK) == -1)
+    if ((lock == RECORD_USE_LOCK) && lock_file(fd, F_RDLCK) == -1)
     {
         close(fd);
         return -1;
@@ -227,26 +253,26 @@ int record__search_and_update(void *rec, size_t size, const char *filename, int 
                 break;
             }
 
-            unlock_file(fd);
+            (lock == RECORD_USE_LOCK) && unlock_file(fd);
             close(fd);
             return index;
         }
         index++;
     }
 
-    unlock_file(fd);
+    (lock == RECORD_USE_LOCK) && unlock_file(fd);
     close(fd);
     return -1;
 }
 
 // Search and update records using cmp, ctx and update
-int record__search_and_update_cont(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *))
+int record__search_and_update_cont(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *), int lock)
 {
     int fd = open(filename, O_RDWR);
     if (fd == -1)
         return -1;
 
-    if (lock_file(fd, F_RDLCK) == -1)
+    if ((lock == RECORD_USE_LOCK) && lock_file(fd, F_RDLCK) == -1)
     {
         close(fd);
         return -1;
@@ -287,13 +313,13 @@ int record__search_and_update_cont(void *rec, size_t size, const char *filename,
         index++;
     }
 
-    unlock_file(fd);
+    (lock == RECORD_USE_LOCK) && unlock_file(fd);
     close(fd);
     return -1;
 }
 
 // Delete records
-int record__delete(size_t size, const char *filename, int (*cmp)(void *))
+int record__delete(size_t size, const char *filename, int (*cmp)(void *), int lock)
 {
     int fd = open(filename, O_RDWR);
     if (fd == -1)
@@ -389,13 +415,13 @@ int record__delete(size_t size, const char *filename, int (*cmp)(void *))
 }
 
 // Get last record
-int record_end_record(void *rec, size_t size, const char *filename)
+int record_end_record(void *rec, size_t size, const char *filename, int lock)
 {
     int fd = open(filename, O_RDONLY);
     if (fd == -1)
         return -1;
 
-    if (lock_file(fd, F_RDLCK) == -1)
+    if ((lock == RECORD_USE_LOCK) && lock_file(fd, F_RDLCK) == -1)
     {
         close(fd);
         return -1;
@@ -415,7 +441,7 @@ int record_end_record(void *rec, size_t size, const char *filename)
         goto failure;
     }
 
-    unlock_file(fd);
+    (lock == RECORD_USE_LOCK) && unlock_file(fd);
     close(fd);
     return 0;
 

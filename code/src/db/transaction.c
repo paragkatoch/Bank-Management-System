@@ -29,7 +29,7 @@ int transaction_save_transaction(int from_uid, int to_uid, int prev_amount, int 
     transaction.from_uid = from_uid;
     transaction.to_uid = to_uid;
 
-    return record__save(&transaction, sizeof(transaction), TRANSACTION_DB);
+    return record__save(&transaction, sizeof(transaction), TRANSACTION_DB, RECORD_USE_LOCK);
 }
 
 //============================================================================
@@ -88,7 +88,7 @@ void transaction_view_transactions(int loggedUser)
     }
 
     int count = record__search_cont(&transactionBits, sizeof(Transaction), TRANSACTION_DB,
-                                    &__find_transaction_based_on_accountId, &accountId);
+                                    &__find_transaction_based_on_accountId, &accountId, RECORD_USE_LOCK);
 
     if (count == -1)
     {
