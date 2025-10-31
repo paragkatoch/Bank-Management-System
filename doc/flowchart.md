@@ -1,5 +1,17 @@
 # Bank Management System - Flowchart & System Flow
 
+**Last Updated:** October 31, 2025  
+**Project:** Banking Management System  
+**Course:** System Software, IIIT Bangalore
+
+## 📚 Documentation Navigation
+- **[← Back to Main README](../README.md)**
+- **[Quick Start Guide](QUICK_START.md)** - Get started in 5 minutes
+- **[Class Diagram](class_diagram.puml)** - UML architecture
+- **[Workflow](../workflow.c)** - Implementation logic
+
+---
+
 ## System Overview
 
 ```
@@ -581,9 +593,452 @@ Check Database Files
             │
             ▼
       Initialize Empty Files
-        ├─ user.db
-        ├─ account.db
-        ├─ loan.db
-        ├─ transaction.db
-        └─ feedback.db
+        ├─ user.dat
+        ├─ account.dat
+        ├─ loan.dat
+        ├─ transaction.dat
+        └─ feedback.dat
 ```
+
+## 15. Complete Operation Flows
+
+### Deposit Money Flow (Detailed)
+```
+Customer → Select Deposit Option
+      │
+      ▼
+Enter Amount to Deposit
+      │
+      ▼
+Validate Amount (> 0)
+      │
+      ├─► Invalid → Display Error → Return to Menu
+      │
+      ▼ Valid
+Lock Account File (Write Lock - F_WRLCK)
+      │
+      ▼
+Read Current Account Record
+      │
+      ▼
+Calculate New Balance
+  oldBalance = account.accountBalance
+  newBalance = oldBalance + depositAmount
+      │
+      ▼
+Update Account Record
+  account.accountBalance = newBalance
+      │
+      ▼
+Write Updated Account to File
+      │
+      ▼
+Create Transaction Record
+  transactionId = generateUniqueTransactionId()
+  from_uid = -1 (indicates deposit)
+  to_uid = accountId
+  previousAmount = oldBalance
+  transactionAmount = depositAmount
+  lastAmount = newBalance
+      │
+      ▼
+Write Transaction to File
+      │
+      ▼
+Release Account Lock
+      │
+      ▼
+Display Success Message
+  "Deposit Successful!"
+  "New Balance: ₹{newBalance}"
+      │
+      ▼
+Return to Menu
+```
+
+### Withdraw Money Flow (Detailed)
+```
+Customer → Select Withdraw Option
+      │
+      ▼
+Enter Amount to Withdraw
+      │
+      ▼
+Validate Amount (> 0)
+      │
+      ├─► Invalid → Display Error → Return to Menu
+      │
+      ▼ Valid
+Lock Account File (Write Lock - F_WRLCK)
+      │
+      ▼
+Read Current Account Record
+      │
+      ▼
+Check Sufficient Balance
+  currentBalance >= withdrawAmount ?
+      │
+      ├─► NO → Release Lock → Display Error → Return to Menu
+      │
+      ▼ YES
+Calculate New Balance
+  oldBalance = account.accountBalance
+  newBalance = oldBalance - withdrawAmount
+      │
+      ▼
+Update Account Record
+  account.accountBalance = newBalance
+      │
+      ▼
+Write Updated Account to File
+      │
+      ▼
+Create Transaction Record
+  transactionId = generateUniqueTransactionId()
+  from_uid = accountId
+  to_uid = -1 (indicates withdrawal)
+  previousAmount = oldBalance
+  transactionAmount = withdrawAmount
+  lastAmount = newBalance
+      │
+      ▼
+Write Transaction to File
+      │
+      ▼
+Release Account Lock
+      │
+      ▼
+Display Success Message
+  "Withdrawal Successful!"
+  "New Balance: ₹{newBalance}"
+      │
+      ▼
+Return to Menu
+```
+
+### Apply for Loan Flow (Detailed)
+```
+Customer → Select Apply for Loan
+      │
+      ▼
+Enter Loan Amount
+      │
+      ▼
+Validate Amount (> 0)
+      │
+      ├─► Invalid → Display Error → Return to Menu
+      │
+      ▼ Valid
+Lock Loan File (Write Lock)
+      │
+      ▼
+Create New Loan Record
+  loanId = generateUniqueLoanId()
+  loanAmount = requestedAmount
+  accountID = customer.userId
+  assignedID = -1 (LOAN_NOTASSIGNED)
+  loanStatus = 0 (LOAN_PROCESSING)
+      │
+      ▼
+Write Loan Record to File
+      │
+      ▼
+Release Loan Lock
+      │
+      ▼
+Display Success Message
+  "Loan Application Submitted!"
+  "Loan ID: {loanId}"
+  "Status: Processing"
+  "You will be notified once processed"
+      │
+      ▼
+Return to Menu
+```
+
+### View Transaction History Flow
+```
+Customer → Select View Transactions
+      │
+      ▼
+Lock Transaction File (Read Lock - F_RDLCK)
+      │
+      ▼
+Search All Transactions
+  WHERE from_uid = userId OR to_uid = userId
+      │
+      ▼
+Read Matching Records into Array
+      │
+      ▼
+Release Transaction Lock
+      │
+      ▼
+Display Transaction Table
+  ┌──────┬──────────┬────────┬──────────┬──────────┐
+  │  ID  │   Type   │ Amount │  Before  │  After   │
+  ├──────┼──────────┼────────┼──────────┼──────────┤
+  │ 1001 │ Deposit  │  5000  │  10000   │  15000   │
+  │ 1002 │ Withdraw │  2000  │  15000   │  13000   │
+  │ 1003 │ Transfer │  1000  │  13000   │  12000   │
+  └──────┴──────────┴────────┴──────────┴──────────┘
+      │
+      ▼
+Wait for User Input (Press Enter)
+      │
+      ▼
+Return to Menu
+```
+
+## 16. Role-Based Access Control Matrix
+
+| Operation | Customer | Employee | Manager | Admin |
+|-----------|----------|----------|---------|-------|
+| View Own Balance | ✓ | ✗ | ✗ | ✗ |
+| Deposit Money | ✓ | ✗ | ✗ | ✗ |
+| Withdraw Money | ✓ | ✗ | ✗ | ✗ |
+| Transfer Funds | ✓ | ✗ | ✗ | ✗ |
+| Apply for Loan | ✓ | ✗ | ✗ | ✗ |
+| View Loan Status | ✓ | ✗ | ✗ | ✗ |
+| Submit Feedback | ✓ | ✗ | ✗ | ✗ |
+| View Own Transactions | ✓ | ✗ | ✗ | ✗ |
+| Add Customer | ✗ | ✓ | ✗ | ✗ |
+| Modify Customer | ✗ | ✓ | ✗ | ✓ |
+| Process Loans | ✗ | ✓ | ✗ | ✗ |
+| View Customer Transactions | ✗ | ✓ | ✗ | ✗ |
+| Assign Loans | ✗ | ✗ | ✓ | ✗ |
+| Activate/Deactivate Account | ✗ | ✗ | ✓ | ✗ |
+| Review Feedback | ✗ | ✗ | ✓ | ✗ |
+| Add Employee/Manager | ✗ | ✗ | ✗ | ✓ |
+| Change User Role | ✗ | ✗ | ✗ | ✓ |
+| Modify Any User | ✗ | ✗ | ✗ | ✓ |
+| Change Own Password | ✓ | ✓ | ✓ | ✓ |
+| Logout | ✓ | ✓ | ✓ | ✓ |
+
+## 17. State Transition Diagrams
+
+### User Session States
+```
+┌─────────────┐
+│   LOGGED    │
+│     OUT     │◄──────────────┐
+└─────────────┘               │
+       │                      │
+       │ Login Success        │ Logout
+       │                      │
+       ▼                      │
+┌─────────────┐               │
+│   LOGGED    │               │
+│     IN      │───────────────┘
+└─────────────┘
+       │
+       │ Connection Lost
+       │
+       ▼
+┌─────────────┐
+│  FORCE      │
+│  LOGOUT     │
+└─────────────┘
+```
+
+### Loan Application States
+```
+┌─────────────┐
+│   CREATED   │
+│ (Customer)  │
+└─────────────┘
+       │
+       │ Submit
+       │
+       ▼
+┌─────────────┐
+│ UNASSIGNED  │
+│ (assignedID │
+│    = -1)    │
+└─────────────┘
+       │
+       │ Manager Assigns
+       │
+       ▼
+┌─────────────┐
+│  ASSIGNED   │
+│ (assignedID │
+│ = empId)    │
+└─────────────┘
+       │
+       │ Employee Reviews
+       │
+       ├──────────┬──────────┐
+       │          │          │
+       ▼          ▼          ▼
+┌──────────┐ ┌──────────┐ ┌──────────┐
+│ APPROVED │ │ REJECTED │ │PROCESSING│
+│(Status=1)│ │(Status=2)│ │(Status=0)│
+└──────────┘ └──────────┘ └──────────┘
+       │          │
+       │          │
+       ▼          ▼
+┌──────────────────────┐
+│   FINAL STATE        │
+│ (No further changes) │
+└──────────────────────┘
+```
+
+### Account States
+```
+┌─────────────┐
+│   CREATED   │
+│  (Active)   │
+└─────────────┘
+       │
+       │ Manager Deactivates
+       │
+       ▼
+┌─────────────┐
+│ DEACTIVATED │
+│ (Inactive)  │
+└─────────────┘
+       │
+       │ Manager Activates
+       │
+       ▼
+┌─────────────┐
+│  ACTIVATED  │
+│  (Active)   │
+└─────────────┘
+```
+
+### Feedback States
+```
+┌─────────────┐
+│  SUBMITTED  │
+│ (Customer)  │
+└─────────────┘
+       │
+       │ Submit
+       │
+       ▼
+┌─────────────┐
+│   PENDING   │
+│ (Status=0)  │
+└─────────────┘
+       │
+       │ Manager Reviews
+       │
+       ▼
+┌─────────────┐
+│  REVIEWED   │
+│ (Status=1)  │
+│ + Action    │
+└─────────────┘
+```
+
+## 18. Data Flow Diagrams
+
+### Level 0 DFD (Context Diagram)
+```
+                    ┌──────────────┐
+                    │              │
+        ┌──────────►│   Banking    │◄──────────┐
+        │           │  Management  │           │
+        │           │    System    │           │
+        │           │              │           │
+        │           └──────────────┘           │
+        │                  │                   │
+        │                  │                   │
+   ┌────────┐         ┌────────┐         ┌────────┐
+   │Customer│         │Employee│         │Manager │
+   └────────┘         └────────┘         └────────┘
+        │                  │                   │
+        │                  │                   │
+        │           ┌──────────────┐           │
+        └──────────►│              │◄──────────┘
+                    │     Admin    │
+                    │              │
+                    └──────────────┘
+```
+
+### Level 1 DFD (System Processes)
+```
+Customer ──────► [1.0 Authentication] ──────► User DB
+                         │
+                         ▼
+              [2.0 Account Operations]
+                    │         │
+                    ▼         ▼
+              Account DB  Transaction DB
+                    │
+                    ▼
+              [3.0 Loan Management]
+                    │
+                    ▼
+                 Loan DB
+                    │
+                    ▼
+              [4.0 Feedback System]
+                    │
+                    ▼
+              Feedback DB
+```
+
+## 19. Sequence Diagrams
+
+### Fund Transfer Sequence
+```
+Customer    Client    Server    Account DB    Transaction DB
+   │           │         │            │              │
+   │──Request──►│         │            │              │
+   │           │──Send───►│            │              │
+   │           │         │──Lock A────►│              │
+   │           │         │◄──Locked────│              │
+   │           │         │──Lock B────►│              │
+   │           │         │◄──Locked────│              │
+   │           │         │──Read A────►│              │
+   │           │         │◄──Data──────│              │
+   │           │         │──Read B────►│              │
+   │           │         │◄──Data──────│              │
+   │           │         │──Update A──►│              │
+   │           │         │──Update B──►│              │
+   │           │         │──Create Txn─┼─────────────►│
+   │           │         │──Unlock────►│              │
+   │           │◄─Result─│             │              │
+   │◄─Display──│         │             │              │
+```
+
+## 20. Summary
+
+This flowchart document provides comprehensive visualization of:
+- System architecture and components
+- User authentication and authorization flows
+- Role-specific operations and menus
+- Database operations with concurrency control
+- File locking mechanisms
+- ACID property implementation
+- Error handling strategies
+- Communication protocols
+- State transitions
+- Data flow patterns
+
+For implementation details, refer to:
+- **[Main README](../README.md)** - Complete project documentation and setup
+- **[Quick Start Guide](QUICK_START.md)** - Get started in 5 minutes
+- **[Class Diagram](class_diagram.puml)** - UML architecture visualization
+- **[Workflow](../workflow.c)** - System workflow implementation
+- **Source Code** - `code/src/` and `code/include/` directories
+
+---
+
+## 📖 Related Documentation
+
+| Document | Description | Link |
+|----------|-------------|------|
+| **README** | Main documentation, installation, usage | [README.md](../README.md) |
+| **Quick Start** | 5-minute setup guide | [QUICK_START.md](QUICK_START.md) |
+| **Class Diagram** | UML architecture | [class_diagram.puml](class_diagram.puml) |
+| **Workflow** | Implementation logic | [workflow.c](../workflow.c) |
+| **Source Code** | Implementation files | `../code/src/` |
+| **Headers** | Function declarations | `../code/include/` |
+
+---
+
+**End of Flowchart Documentation**

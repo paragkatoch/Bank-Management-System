@@ -17,7 +17,7 @@ SERVER_SRC = $(NODE_DIR)/server.c $(COMMON_SRCS)
 CLIENT_SRC = $(NODE_DIR)/client.c $(COMMON_SRCS)
 
 # Default target
-all: build_server build_client server
+all: build_server build_client
 
 .PHONY: all server client clean build_server build_client
 

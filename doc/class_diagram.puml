@@ -1,5 +1,23 @@
 @startuml Banking Management System - Class Diagram
 
+' ============================================================================
+' Banking Management System - UML Class Diagram
+' Last Updated: October 31, 2025
+' 
+' Documentation Links:
+' - Main README: ../README.md
+' - Quick Start: QUICK_START.md
+' - Flowcharts: flowchart.md
+' - Workflow: ../workflow.c
+' 
+' View this diagram:
+' 1. VS Code: Install PlantUML extension, press Alt+D (Option+D on Mac)
+' 2. Online: https://www.plantuml.com/plantuml/uml/
+' 3. CLI: plantuml class_diagram.puml
+' ============================================================================
+
+title Banking Management System - Architecture Overview
+
 ' ===================================
 ' Entity Classes (Data Models)
 ' ===================================
