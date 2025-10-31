@@ -110,6 +110,18 @@ int record__save(void *rec, size_t size, const char *filename, int lock)
     return (write_size == size) ? 0 : -1;
 }
 
+// Update record at position `pos` using existing fd (lock must be held externally)
+int record__update_fd(int fd, void *rec, size_t size, int pos)
+{
+    off_t offset = (off_t)pos * size;
+
+    if (lseek(fd, offset, SEEK_SET) == -1)
+        return -1;
+
+    ssize_t write_size = write(fd, rec, size);
+    return (write_size == size) ? 0 : -1;
+}
+
 // Update record at position `pos`
 int record__update(void *rec, size_t size, const char *filename, int pos, int lock)
 {
@@ -133,6 +145,25 @@ int record__update(void *rec, size_t size, const char *filename, int pos, int lo
     close(fd);
 
     return (write_size == size) ? 0 : -1;
+}
+
+// Search record using existing fd (lock must be held externally)
+int record__search_fd(int fd, void *rec, size_t size, int (*cmp)(void *, void *), void *ctx)
+{
+    lseek(fd, 0, SEEK_SET); // Reset to beginning
+    ssize_t n;
+    int index = 0;
+
+    while ((n = read(fd, rec, size)) == size)
+    {
+        if (cmp(rec, ctx))
+        {
+            return index;
+        }
+        index++;
+    }
+
+    return -1;
 }
 
 // Search record

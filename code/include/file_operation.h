@@ -29,7 +29,9 @@ int lock_record_fd(const char *filename, short lock_type, off_t start, size_t le
 // =====================================================
 int record__save(void *rec, size_t size, const char *filename, int lock);
 int record__update(void *rec, size_t size, const char *filename, int pos, int lock);
+int record__update_fd(int fd, void *rec, size_t size, int pos);
 int record__search(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, int lock);
+int record__search_fd(int fd, void *rec, size_t size, int (*cmp)(void *, void *), void *ctx);
 int record__search_cont(void **recs, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, int lock);
 int record__search_and_update(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *), int lock);
 int record__search_and_update_cont(void *rec, size_t size, const char *filename, int (*cmp)(void *, void *), void *ctx, void (*update)(void *), int lock);

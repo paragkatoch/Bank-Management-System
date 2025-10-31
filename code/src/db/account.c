@@ -105,14 +105,6 @@ void account_deposit()
     if ((index = find_Account_From_AccountId(fd, accountId, &account, RECORD_USE_LOCK)) == -1)
         goto cleanup;
 
-    // lock record
-    ssize_t size = sizeof(Account);
-    lock_fd = lock_record_fd(ACCOUNT_DB, F_WRLCK, index * size, size);
-    if (lock_fd == -1)
-        goto cleanup;
-
-    find_Account_From_AccountId(fd, accountId, &account, RECORD_NOT_USE_LOCK);
-
     // Show current balance
     send_message(fd, "\n╔════════════════════════════════════════════════════════╗\n");
     send_message(fd, "║                 DEPOSIT MONEY ◄                    ║\n");
@@ -131,12 +123,22 @@ void account_deposit()
         goto cleanup;
     }
 
+    // lock record AFTER user input
+    ssize_t size = sizeof(Account);
+    lock_fd = lock_record_fd(ACCOUNT_DB, F_WRLCK, index * size, size);
+    if (lock_fd == -1)
+        goto cleanup;
+
+    // Re-read account with locked fd to get fresh data
+    if (record__search_fd(lock_fd, &account, sizeof(Account), &__find_account_based_on_accountId_cmp, &accountId) == -1)
+        goto cleanup;
+
     // Update account balance and save
     int oldBalance = account.accountBalance;
     account.accountBalance += depositAmount;
 
     // Save updated account back to database and Record the deposit transaction
-    if (record__update(&account, size, ACCOUNT_DB, index, RECORD_NOT_USE_LOCK) == -1 ||
+    if (record__update_fd(lock_fd, &account, size, index) == -1 ||
         transaction_save_transaction(-1, accountId, oldBalance, depositAmount, account.accountBalance) == -1)
     {
         send_message(fd, "\nUnable to process transaction");
@@ -152,7 +154,11 @@ void account_deposit()
     waitTillEnter(fd);
 
 cleanup:
-    (lock_fd != -1) && unlock_record(lock_fd, index * size, size);
+    if (lock_fd != -1)
+    {
+        unlock_record(lock_fd, index * size, size);
+        close(lock_fd);
+    }
     free(temp);
     return showStartScreen();
 }
@@ -178,14 +184,6 @@ void account_withdraw()
     if ((index = find_Account_From_AccountId(fd, accountId, &account, RECORD_USE_LOCK)) == -1)
         goto cleanup;
 
-    // lock record
-    ssize_t size = sizeof(Account);
-    lock_fd = lock_record_fd(ACCOUNT_DB, F_WRLCK, index * size, size);
-    if (lock_fd == -1)
-        goto cleanup;
-
-    find_Account_From_AccountId(fd, accountId, &account, RECORD_NOT_USE_LOCK);
-
     // Show current balance
     int oldBalance = account.accountBalance;
     send_message(fd, "\n╔════════════════════════════════════════════════════════╗\n");
@@ -204,11 +202,22 @@ void account_withdraw()
         goto cleanup;
     }
 
+    // lock record AFTER user input
+    ssize_t size = sizeof(Account);
+    lock_fd = lock_record_fd(ACCOUNT_DB, F_WRLCK, index * size, size);
+    if (lock_fd == -1)
+        goto cleanup;
+
+    // Re-read account with locked fd to get fresh data
+    if (record__search_fd(lock_fd, &account, sizeof(Account), &__find_account_based_on_accountId_cmp, &accountId) == -1)
+        goto cleanup;
+
     // Update account balance and save
+    oldBalance = account.accountBalance;
     account.accountBalance -= withdrawAmount;
 
     // Save updated account back to database and Record the deposit transaction
-    if (record__update(&account, sizeof(account), ACCOUNT_DB, index, RECORD_NOT_USE_LOCK) == -1 ||
+    if (record__update_fd(lock_fd, &account, sizeof(account), index) == -1 ||
         transaction_save_transaction(accountId, -1, oldBalance, -1 * withdrawAmount, account.accountBalance) == -1)
     {
         send_message(fd, "\nUnable to process transaction");
@@ -224,7 +233,11 @@ void account_withdraw()
     waitTillEnter(fd);
 
 cleanup:
-    (lock_fd != -1) && unlock_record(lock_fd, index * size, size);
+    if (lock_fd != -1)
+    {
+        unlock_record(lock_fd, index * size, size);
+        close(lock_fd);
+    }
     free(temp);
     return showStartScreen();
 }
@@ -246,18 +259,11 @@ void account_transfer_funds()
     int transferAmount = 0;
     int receiverId = 0;
     int lock_fd1 = -1, lock_fd2 = -1;
+    int firstLockIndex, secondLockIndex;
 
     // get index
     if ((senderIndex = find_Account_From_AccountId(fd, accountId, &senderAccount, RECORD_USE_LOCK)) == -1)
         goto cleanup;
-
-    // lock record
-    ssize_t size = sizeof(Account);
-    lock_fd1 = lock_record_fd(ACCOUNT_DB, F_WRLCK, senderIndex * size, size);
-    if (lock_fd1 == -1)
-        goto cleanup;
-
-    find_Account_From_AccountId(fd, accountId, &senderAccount, RECORD_NOT_USE_LOCK);
 
     send_message(fd, "\n╔════════════════════════════════════════════════════════╗\n");
     send_message(fd, "║                TRANSFER FUNDS ◄                    ║\n");
@@ -268,13 +274,6 @@ void account_transfer_funds()
     // Search for receiver account
     if ((receiverIndex = find_Account_From_AccountId(fd, receiverId, &receiverAccount, RECORD_USE_LOCK)) == -1)
         goto cleanup;
-
-    // lock record
-    lock_fd2 = lock_record_fd(ACCOUNT_DB, F_WRLCK, receiverIndex * size, size);
-    if (lock_fd2 == -1)
-        goto cleanup;
-
-    find_Account_From_AccountId(fd, receiverId, &receiverAccount, RECORD_NOT_USE_LOCK);
 
     // check if user account is inactive
 
@@ -307,6 +306,39 @@ void account_transfer_funds()
         goto cleanup;
     }
 
+    // Lock in consistent order to prevent deadlock
+    ssize_t size = sizeof(Account);
+    if (senderIndex < receiverIndex)
+    {
+        firstLockIndex = senderIndex;
+        secondLockIndex = receiverIndex;
+    }
+    else
+    {
+        firstLockIndex = receiverIndex;
+        secondLockIndex = senderIndex;
+    }
+
+    // lock records AFTER user input
+    lock_fd1 = lock_record_fd(ACCOUNT_DB, F_WRLCK, firstLockIndex * size, size);
+    if (lock_fd1 == -1)
+        goto cleanup;
+
+    lock_fd2 = lock_record_fd(ACCOUNT_DB, F_WRLCK, secondLockIndex * size, size);
+    if (lock_fd2 == -1)
+        goto cleanup;
+
+    // Determine which fd corresponds to which account
+    int sender_fd = (firstLockIndex == senderIndex) ? lock_fd1 : lock_fd2;
+    int receiver_fd = (firstLockIndex == receiverIndex) ? lock_fd1 : lock_fd2;
+
+    // Re-read both accounts with locked fds to get fresh data
+    if (record__search_fd(sender_fd, &senderAccount, sizeof(Account), &__find_account_based_on_accountId_cmp, &accountId) == -1)
+        goto cleanup;
+
+    if (record__search_fd(receiver_fd, &receiverAccount, sizeof(Account), &__find_account_based_on_accountId_cmp, &receiverId) == -1)
+        goto cleanup;
+
     // Perform transfer
     int oldSenderBalance = senderAccount.accountBalance;
     senderAccount.accountBalance -= transferAmount;
@@ -314,8 +346,8 @@ void account_transfer_funds()
 
     // Update both records in DB
     if (
-        record__update(&senderAccount, sizeof(senderAccount), ACCOUNT_DB, senderIndex, RECORD_NOT_USE_LOCK) == -1 ||
-        record__update(&receiverAccount, sizeof(receiverAccount), ACCOUNT_DB, receiverIndex, RECORD_NOT_USE_LOCK) == -1 ||
+        record__update_fd(sender_fd, &senderAccount, sizeof(senderAccount), senderIndex) == -1 ||
+        record__update_fd(receiver_fd, &receiverAccount, sizeof(receiverAccount), receiverIndex) == -1 ||
         transaction_save_transaction(accountId, receiverId, oldSenderBalance, transferAmount, senderAccount.accountBalance) == -1)
     {
         send_message(fd, "\nUnable to process transaction");
@@ -333,8 +365,16 @@ void account_transfer_funds()
     waitTillEnter(fd);
 
 cleanup:
-    (lock_fd1 != -1) && unlock_record(lock_fd1, senderIndex * size, size);
-    (lock_fd2 != -1) && unlock_record(lock_fd2, receiverIndex * size, size);
+    if (lock_fd1 != -1)
+    {
+        unlock_record(lock_fd1, firstLockIndex * size, size);
+        close(lock_fd1);
+    }
+    if (lock_fd2 != -1)
+    {
+        unlock_record(lock_fd2, secondLockIndex * size, size);
+        close(lock_fd2);
+    }
     free(temp);
     return showStartScreen();
 }
