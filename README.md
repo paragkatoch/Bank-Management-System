@@ -7,7 +7,7 @@ Multi-user concurrent banking system with client-server architecture, file-based
 - [Quick Start Guide](doc/QUICK_START.md)
 - [System Flowcharts](doc/flowchart.md)
 - [Class Diagram](doc/class_diagram.puml)
-- [Workflow](workflow.md)
+- [Workflow](doc/workflow.md)
 
 ## Class Diagram
 
