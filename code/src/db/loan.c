@@ -21,6 +21,14 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+// Helper function to find account by ID
+static int __find_account_by_id_cmp(void *rec, void *ctx)
+{
+    Account *account = (Account *)rec;
+    int userId = *(int *)ctx;
+    return account->accountId == userId ? 1 : 0;
+}
+
 static void __display_loans(int fd, int count, Loan *loansBits, char *header)
 {
     Loan *loans = (Loan *)loansBits;
@@ -282,10 +290,10 @@ void loan_view_and_process_assigned_loans()
             continue;
         }
 
-        if (currentLoan->loanStatus == LOAN_APPROVED)
+        if (action == LOAN_APPROVED)
         {
             int index;
-            int lock_fd;
+            int lock_fd = -1;
             Account account;
 
             if ((index = find_Account_From_AccountId(fd, currentLoan->accountID, &account, RECORD_USE_LOCK)) == -1)
@@ -297,20 +305,39 @@ void loan_view_and_process_assigned_loans()
             if (lock_fd == -1)
                 goto cleanup;
 
-            find_Account_From_AccountId(fd, currentLoan->accountID, &account, RECORD_NOT_USE_LOCK);
+            // Re-read account with locked fd to get fresh data
+            if (record__search_fd(lock_fd, &account, sizeof(Account), &__find_account_by_id_cmp, &currentLoan->accountID) == -1)
+            {
+                if (lock_fd != -1)
+                {
+                    unlock_record(lock_fd, index * size, size);
+                    close(lock_fd);
+                }
+                goto cleanup;
+            }
+
             int oldBalance = account.accountBalance;
             account.accountBalance += currentLoan->loanAmount;
 
             // Save updated account back to database and Record the deposit transaction
-            if (record__update(&account, size, ACCOUNT_DB, index, RECORD_NOT_USE_LOCK) == -1 ||
+            if (record__update_fd(lock_fd, &account, size, index) == -1 ||
                 transaction_save_transaction(-1, currentLoan->accountID, oldBalance, currentLoan->loanAmount, account.accountBalance) == -1)
             {
                 send_message(fd, "\nUnable to process the loan");
                 waitTillEnter(fd);
+                if (lock_fd != -1)
+                {
+                    unlock_record(lock_fd, index * size, size);
+                    close(lock_fd);
+                }
                 goto cleanup;
             }
 
-            (lock_fd != -1) && unlock_record(lock_fd, index * size, size);
+            if (lock_fd != -1)
+            {
+                unlock_record(lock_fd, index * size, size);
+                close(lock_fd);
+            }
         }
 
         int loanId = currentLoan->loanId;

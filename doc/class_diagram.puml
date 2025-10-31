@@ -1,0 +1,255 @@
+@startuml Banking Management System - Class Diagram
+
+' ===================================
+' Entity Classes (Data Models)
+' ===================================
+
+class User {
+  - int userId
+  - int role
+  - int session_active
+  - int account_active
+  - char name[50]
+  - char age[5]
+  - char address[100]
+  - char phone[20]
+  - char username[20]
+  - char password[20]
+  --
+  + user_login()
+  + user_create_employee()
+  + user_create_customer()
+  + user_change_user_details(int customerOnly)
+  + user_view_user_details()
+  + user_change_password()
+  + user_activate_user()
+  + user_deactivate_user()
+  + user_change_user_role()
+  + user_logout()
+  + user_logout_everyone()
+  + init_user(...)
+  + find_user_based_on_userId(...)
+}
+
+class Account {
+  - int accountId
+  - int accountBalance
+  --
+  + find_Account_From_AccountId(...)
+  + account_create_account(int accountId, int accountBalance)
+  + account_view_balance()
+  + account_deposit()
+  + account_withdraw()
+  + account_transfer_funds()
+}
+
+class Transaction {
+  - int transactionId
+  - int previousAmount
+  - int transactionAmount
+  - int lastAmount
+  - int from_uid
+  - int to_uid
+  --
+  + transaction_save_transaction(...)
+  + transaction_view_transactions(int loggedUser)
+}
+
+class Loan {
+  - int loanId
+  - int loanAmount
+  - int accountID
+  - int assignedID
+  - int loanStatus
+  --
+  + loan_create_loan()
+  + loan_view_loan_status()
+  + loan_view_and_process_assigned_loans()
+  + loan_view_non_assigned_loans_and_assign()
+}
+
+class Feedback {
+  - int feedbackId
+  - int userId
+  - char feedback[1000]
+  - char action[1000]
+  - int reviewStatus
+  --
+  + feedback_create_feedback()
+  + feedback_view_feedback_details()
+  + feedback_view_user_feedback()
+  + feedback_view_all_feedback()
+  + feedback_reviewCreate_action()
+  + feedback_view_non_reviewed_feedback()
+  + feedback_review_feedback()
+}
+
+' ===================================
+' Utility/Service Classes
+' ===================================
+
+class FileOperation <<utility>> {
+  --
+  + lock_file(int fd, short lock_type)
+  + unlock_file(int fd)
+  + lock_record(...)
+  + unlock_record(...)
+  + lock_file_fd(...)
+  + lock_record_fd(...)
+  + record__save(...)
+  + record__update(...)
+  + record__update_fd(...)
+  + record__search(...)
+  + record__search_fd(...)
+  + record__search_cont(...)
+  + record__search_and_update(...)
+  + record__search_and_update_cont(...)
+  + record__delete(...)
+  + record_end_record(...)
+}
+
+class Communication <<utility>> {
+  --
+  + send_message(int fd, const char *msg)
+  + receive_message(int fd, char **buffer)
+}
+
+class Helper <<utility>> {
+  --
+  + clear_terminal(int fd)
+  + safe_strncpy(...)
+  + server_error()
+  + makeString(...)
+  + generateUniqueUserId()
+  + generateUniqueLoanId()
+  + generateUniqueFeedbackId()
+  + generateUniqueTransactionId()
+  + waitTillEnter(int fd)
+  + prompt_user_input(...)
+}
+
+class StartScreen <<boundary>> {
+  --
+  + showStartScreen()
+  + admin_start_screen()
+  + manager_start_screen()
+  + employee_start_screen()
+  + customer_start_screen()
+}
+
+class Init <<control>> {
+  --
+  + init()
+}
+
+class Config <<configuration>> {
+  --
+  {static} USER_DB: "db/user.dat"
+  {static} ACCOUNT_DB: "db/account.dat"
+  {static} LOAN_DB: "db/loan.dat"
+  {static} TRANSACTION_DB: "db/transaction.dat"
+  {static} FEEDBACK_DB: "db/feedback.dat"
+  {static} MSG_DELIM: "/|/"
+  {static} int clientfd
+  {static} int serverfd
+  {static} User logged_in_user
+  {static} int logged_in_user_index
+}
+
+' ===================================
+' Relationships
+' ===================================
+
+' User has one Account
+User "1" -- "1" Account : has >
+
+' User creates multiple Transactions
+User "1" -- "0..*" Transaction : creates >
+
+' Account has multiple Transactions
+Account "1" -- "0..*" Transaction : involved in >
+
+' User applies for multiple Loans
+User "1" -- "0..*" Loan : applies for >
+
+' User submits multiple Feedbacks
+User "1" -- "0..*" Feedback : submits >
+
+' Loan is assigned to User (Employee)
+Loan "0..*" -- "0..1" User : assigned to >
+
+' All entities use FileOperation for persistence
+User ..> FileOperation : uses
+Account ..> FileOperation : uses
+Transaction ..> FileOperation : uses
+Loan ..> FileOperation : uses
+Feedback ..> FileOperation : uses
+
+' Communication used by client-server
+User ..> Communication : uses
+StartScreen ..> Communication : uses
+
+' Helper utilities used across system
+User ..> Helper : uses
+Account ..> Helper : uses
+Loan ..> Helper : uses
+Feedback ..> Helper : uses
+Transaction ..> Helper : uses
+
+' StartScreen displays UI for different roles
+StartScreen ..> User : displays for
+
+' Init initializes the system
+Init ..> Config : configures
+Init ..> FileOperation : initializes
+
+' Config provides global configuration
+User ..> Config : accesses
+Account ..> Config : accesses
+Loan ..> Config : accesses
+Feedback ..> Config : accesses
+Transaction ..> Config : accesses
+
+' ===================================
+' Notes
+' ===================================
+
+note right of User
+  Roles:
+  - ADMIN_ROLE (1)
+  - EMPLOYEE_ROLE (2)
+  - MANAGER_ROLE (3)
+  - CUSTOMER_ROLE (4)
+  
+  Session Status:
+  - SESSION_ACTIVE (1)
+  - SESSION_INACTIVE (0)
+  
+  Account Status:
+  - ACCOUNT_ACTIVE (1)
+  - ACCOUNT_INACTIVE (0)
+end note
+
+note right of Loan
+  Loan Status:
+  - LOAN_PROCESSING (0)
+  - LOAN_APPROVED (1)
+  - LOAN_REJECTED (2)
+  
+  Assignment:
+  - LOAN_NOTASSIGNED (-1)
+end note
+
+note right of Feedback
+  Review Status:
+  - FEEDBACK_NOT_REVIEWED (0)
+  - FEEDBACK_REVIEWED (1)
+end note
+
+note bottom of FileOperation
+  Provides CRUD operations with
+  file locking mechanisms for
+  concurrent access control
+end note
+
+@enduml
