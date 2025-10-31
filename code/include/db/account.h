@@ -23,6 +23,8 @@ typedef struct
 // Account method Declarations
 // =======================================
 
+int find_Account_From_AccountId(int fd, int accountId, Account *account, int lock);
+
 // Create and save Account
 void account_create_account(int accountId, int accountBalance);
 

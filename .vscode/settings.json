@@ -8,6 +8,7 @@
 		"user.h": "c",
 		"transaction.h": "c",
 		"stdarg.h": "c",
-		"helper.h": "c"
+		"helper.h": "c",
+		"unistd.h": "c"
 	}
 }

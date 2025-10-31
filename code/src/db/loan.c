@@ -11,6 +11,7 @@
 #include "config.h"
 #include "helper.h"
 #include "communication.h"
+#include "db/transaction.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -287,7 +288,7 @@ void loan_view_and_process_assigned_loans()
             int lock_fd;
             Account account;
 
-            if ((index = __find_Account_From_AccountId(fd, currentLoan->accountID, &account, RECORD_USE_LOCK)) == -1)
+            if ((index = find_Account_From_AccountId(fd, currentLoan->accountID, &account, RECORD_USE_LOCK)) == -1)
                 goto cleanup;
 
             // lock record
@@ -296,7 +297,7 @@ void loan_view_and_process_assigned_loans()
             if (lock_fd == -1)
                 goto cleanup;
 
-            __find_Account_From_AccountId(fd, currentLoan->accountID, &account, RECORD_NOT_USE_LOCK);
+            find_Account_From_AccountId(fd, currentLoan->accountID, &account, RECORD_NOT_USE_LOCK);
             int oldBalance = account.accountBalance;
             account.accountBalance += currentLoan->loanAmount;
 

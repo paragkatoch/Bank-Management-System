@@ -29,7 +29,7 @@ static int __find_account_based_on_accountId_cmp(void *rec, void *ctx)
     return account->accountId == userId ? 1 : 0;
 }
 
-static int __find_Account_From_AccountId(int fd, int accountId, Account *account, int lock)
+int find_Account_From_AccountId(int fd, int accountId, Account *account, int lock)
 {
     int index;
 
@@ -71,7 +71,7 @@ void account_view_balance()
     int accountId = logged_in_user.userId;
     Account account;
 
-    if (__find_Account_From_AccountId(fd, accountId, &account, RECORD_USE_LOCK) == -1)
+    if (find_Account_From_AccountId(fd, accountId, &account, RECORD_USE_LOCK) == -1)
         goto cleanup;
 
     send_message(fd, "\n╔════════════════════════════════════════════════════════╗\n");
@@ -102,7 +102,7 @@ void account_deposit()
     int lock_fd = -1;
 
     // get index
-    if ((index = __find_Account_From_AccountId(fd, accountId, &account, RECORD_USE_LOCK)) == -1)
+    if ((index = find_Account_From_AccountId(fd, accountId, &account, RECORD_USE_LOCK)) == -1)
         goto cleanup;
 
     // lock record
@@ -111,7 +111,7 @@ void account_deposit()
     if (lock_fd == -1)
         goto cleanup;
 
-    __find_Account_From_AccountId(fd, accountId, &account, RECORD_NOT_USE_LOCK);
+    find_Account_From_AccountId(fd, accountId, &account, RECORD_NOT_USE_LOCK);
 
     // Show current balance
     send_message(fd, "\n╔════════════════════════════════════════════════════════╗\n");
@@ -175,7 +175,7 @@ void account_withdraw()
     int lock_fd = -1;
 
     // get index
-    if ((index = __find_Account_From_AccountId(fd, accountId, &account, RECORD_USE_LOCK)) == -1)
+    if ((index = find_Account_From_AccountId(fd, accountId, &account, RECORD_USE_LOCK)) == -1)
         goto cleanup;
 
     // lock record
@@ -184,7 +184,7 @@ void account_withdraw()
     if (lock_fd == -1)
         goto cleanup;
 
-    __find_Account_From_AccountId(fd, accountId, &account, RECORD_NOT_USE_LOCK);
+    find_Account_From_AccountId(fd, accountId, &account, RECORD_NOT_USE_LOCK);
 
     // Show current balance
     int oldBalance = account.accountBalance;
@@ -248,7 +248,7 @@ void account_transfer_funds()
     int lock_fd1 = -1, lock_fd2 = -1;
 
     // get index
-    if ((senderIndex = __find_Account_From_AccountId(fd, accountId, &senderAccount, RECORD_USE_LOCK)) == -1)
+    if ((senderIndex = find_Account_From_AccountId(fd, accountId, &senderAccount, RECORD_USE_LOCK)) == -1)
         goto cleanup;
 
     // lock record
@@ -257,7 +257,7 @@ void account_transfer_funds()
     if (lock_fd1 == -1)
         goto cleanup;
 
-    __find_Account_From_AccountId(fd, accountId, &senderAccount, RECORD_NOT_USE_LOCK);
+    find_Account_From_AccountId(fd, accountId, &senderAccount, RECORD_NOT_USE_LOCK);
 
     send_message(fd, "\n╔════════════════════════════════════════════════════════╗\n");
     send_message(fd, "║                TRANSFER FUNDS ◄                    ║\n");
@@ -266,7 +266,7 @@ void account_transfer_funds()
     receiverId = atoi(temp);
 
     // Search for receiver account
-    if ((receiverIndex = __find_Account_From_AccountId(fd, receiverId, &receiverAccount, RECORD_USE_LOCK)) == -1)
+    if ((receiverIndex = find_Account_From_AccountId(fd, receiverId, &receiverAccount, RECORD_USE_LOCK)) == -1)
         goto cleanup;
 
     // lock record
@@ -274,7 +274,7 @@ void account_transfer_funds()
     if (lock_fd2 == -1)
         goto cleanup;
 
-    __find_Account_From_AccountId(fd, receiverId, &receiverAccount, RECORD_NOT_USE_LOCK);
+    find_Account_From_AccountId(fd, receiverId, &receiverAccount, RECORD_NOT_USE_LOCK);
 
     // check if user account is inactive
 
